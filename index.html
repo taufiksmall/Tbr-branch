@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Laporan Akuisisi Harian</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    .container { max-width: 600px; margin: 0 auto; }
+
+    .header {
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: white;
+      border-radius: 16px 16px 0 0;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .header .icon { font-size: 40px; margin-bottom: 8px; }
+    .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .header .subtitle { font-size: 13px; opacity: 0.85; }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .card:last-of-type { border-radius: 0 0 16px 16px; border-bottom: none; }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      margin-bottom: 16px;
+    }
+
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 6px;
+    }
+    label .wajib { color: #e53e3e; margin-left: 2px; }
+    input[type="text"], input[type="date"], input[type="number"],
+    select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #2d3748;
+      background: #fff;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a73e8;
+      background: #f7fbff;
+    }
+    input:disabled, select:disabled {
+      background: #f7fafc;
+      color: #a0aec0;
+      cursor: not-allowed;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .cabang-info {
+      margin-top: 8px;
+      padding: 10px 14px;
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #2b6cb0;
+      display: none;
+    }
+    .cabang-info.show { display: block; }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .total-box {
+      margin-top: 14px;
+      padding: 14px;
+      background: #f7fafc;
+      border-radius: 10px;
+      text-align: center;
+      border: 2px solid #e2e8f0;
+    }
+    .total-box .label { font-size: 12px; color: #718096; margin-bottom: 4px; }
+    .total-box .value { font-size: 26px; font-weight: 800; color: #2b6cb0; }
+
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 16px 0;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 15px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover { opacity: 0.9; }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    #loadingOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    #loadingOverlay.show { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg { color: #e53e3e; font-size: 12px; margin-top: 4px; display: none; }
+    .error-msg.show { display: block; }
+    .field-invalid input, .field-invalid select { border-color: #e53e3e !important; }
+
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #a0aec0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div>Menyimpan laporan...</div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="icon">📝</div>
+    <h1>Form Laporan Akuisisi Harian</h1>
+    <div class="subtitle">Isi semua data dengan lengkap dan benar</div>
+  </div>
+
+  <form id="formLaporan" novalidate>
+
+    <!-- Tanggal & Cabang -->
+    <div class="card">
+      <div class="card-title">🏢 Data Laporan</div>
+
+      <div class="field" id="f-tanggal">
+        <label>Tanggal Laporan <span class="wajib">*</span></label>
+        <input type="date" id="tanggalLaporan" required>
+        <div class="error-msg">Tanggal wajib diisi.</div>
+      </div>
+
+      <div class="field" id="f-area">
+        <label>Pilih Area <span class="wajib">*</span></label>
+        <select id="selectArea" required>
+          <option value="">-- Pilih Area --</option>
+        </select>
+        <div class="error-msg">Area wajib dipilih.</div>
+      </div>
+
+      <div class="field" id="f-cabang">
+        <label>Pilih Cabang <span class="wajib">*</span></label>
+        <select id="selectCabang" disabled required>
+          <option value="">-- Pilih Area terlebih dahulu --</option>
+        </select>
+        <div class="cabang-info" id="infoCabang">
+          📍 <span id="labelCabang"></span>
+        </div>
+        <div class="error-msg">Cabang wajib dipilih.</div>
+      </div>
+
+      <input type="hidden" id="kodeCabang">
+      <input type="hidden" id="namaCabang">
+      <input type="hidden" id="areaValue">
+    </div>
+
+    <!-- Akuisisi -->
+    <div class="card">
+      <div class="card-title">📊 Hasil Akuisisi</div>
+
+      <div class="field-row">
+        <div class="field" id="f-lvm">
+          <label>Jumlah Akuisisi LVM <span class="wajib">*</span></label>
+          <input type="number" id="jumlahLVM" placeholder="0" min="0" value="0" required>
+          <div class="error-msg">Wajib diisi.</div>
+        </div>
+        <div class="field" id="f-edc">
+          <label>Jumlah Akuisisi EDC <span class="wajib">*</span></label>
+          <input type="number" id="jumlahEDC" placeholder="0" min="0" value="0" required>
+          <div class="error-msg">Wajib diisi.</div>
+        </div>
+      </div>
+
+      <div class="total-box">
+        <div class="label">Total Akuisisi</div>
+        <div class="value" id="totalAkuisisi">0</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field-row">
+        <div class="field" id="f-plvm">
+          <label>Pemasangan LVM <span class="wajib">*</span></label>
+          <input type="number" id="jumlahPemasanganLVM" placeholder="0" min="0" value="0" required>
+          <div class="error-msg">Wajib diisi.</div>
+        </div>
+        <div class="field" id="f-redc">
+          <label>Retensi EDC <span class="wajib">*</span></label>
+          <input type="number" id="jumlahRetensiEDC" placeholder="0" min="0" value="0" required>
+          <div class="error-msg">Wajib diisi.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kendala & Keterangan -->
+    <div class="card">
+      <div class="card-title">📋 Kendala & Keterangan <span style="font-weight:400;font-style:italic;text-transform:none;">(opsional)</span></div>
+
+      <div class="field">
+        <label>Kendala</label>
+        <textarea id="kendala" placeholder="Tuliskan kendala yang dihadapi (jika ada)"></textarea>
+      </div>
+      <div class="field">
+        <label>Keterangan Tambahan</label>
+        <textarea id="keterangan" placeholder="Informasi tambahan (jika ada)"></textarea>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="card">
+      <button type="submit" class="btn-submit" id="btnSubmit">
+        📤 Kirim Laporan
+      </button>
+    </div>
+
+  </form>
+
+  <div class="footer">Form Laporan Akuisisi Harian</div>
+</div>
+
+<script>
+// ================================================================
+// ⚙️ KONFIGURASI — GANTI URL INI DENGAN URL APPS SCRIPT ANDA
+// ================================================================
+var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
+// ================================================================
+
+// ── Data Master Cabang ──────────────────────────────────────────
+var DATA_CABANG = {
+  "Area Manado": [
+    {kode:"15000",nama:"KC Manado Dotulolong Lasut"},{kode:"15001",nama:"KCP Manado Toar"},
+    {kode:"15002",nama:"KC Kotamobagu"},{kode:"15003",nama:"KC Bitung"},
+    {kode:"15004",nama:"KC Gorontalo"},{kode:"15005",nama:"KC Tahuna"},
+    {kode:"15006",nama:"KCP Manado Sam Ratulangi"},{kode:"15007",nama:"KCP Manado Sudirman"},
+    {kode:"15008",nama:"KCP Limboto"},{kode:"15010",nama:"KCP Manado Boulevard"},
+    {kode:"15011",nama:"KCP Marisa"},{kode:"15012",nama:"KCP Tomohon"},
+    {kode:"15015",nama:"KCP Amurang"},{kode:"15017",nama:"KCP Manado Bahu"},
+    {kode:"15018",nama:"KCP Manado Pasar Calaca"},{kode:"15019",nama:"KCP Girian"},
+    {kode:"15020",nama:"KCP Manado Paal Dua"},{kode:"15021",nama:"KCP Airmadidi"},
+    {kode:"15022",nama:"KCP Manado Town Square 3"},{kode:"15075",nama:"KCP Manado Airmadidi"},
+    {kode:"15076",nama:"KCP Manado Ratahan"},{kode:"15078",nama:"KCP Gorontalo Kwandang"},
+    {kode:"15079",nama:"KCP Paguyaman"},{kode:"15081",nama:"KCP Manado Paniki"},
+    {kode:"15082",nama:"KCP Manado Langowan"},{kode:"15083",nama:"KCP Gorontalo Agus Salim"},
+    {kode:"15085",nama:"KCP Tilamuta"},{kode:"15086",nama:"KCP Tondano"},
+    {kode:"15088",nama:"KCP Gorontalo Isimu"},{kode:"15089",nama:"KCP Manado Ringroad"},
+    {kode:"15090",nama:"KCP Bone Bolango Kabila"},{kode:"15091",nama:"KCP Siau"},
+    {kode:"15096",nama:"KCP Boalemo Wonosari"},{kode:"15097",nama:"KCP Lolak"}
+  ],
+  "Area Palu": [
+    {kode:"15100",nama:"KC Palu Sam Ratulangi"},{kode:"15101",nama:"KCP Palu Imam Bonjol"},
+    {kode:"15102",nama:"KCP Palu Hasanuddin"},{kode:"15103",nama:"KCP Donggala"},
+    {kode:"15104",nama:"KC Luwuk"},{kode:"15105",nama:"KCP Poso"},
+    {kode:"15106",nama:"KC Toli Toli"},{kode:"15107",nama:"KCP Parigi"},
+    {kode:"15109",nama:"KCP Ampana"},{kode:"15110",nama:"KCP Palu Basuki Rahmat"},
+    {kode:"15111",nama:"KCP Morowali Bahodopi"},{kode:"15112",nama:"KCP Tawaeli"},
+    {kode:"15175",nama:"KCP Pasangkayu"},{kode:"15177",nama:"KCP Toili"},
+    {kode:"15178",nama:"KCP Palu Moh Yamin"},{kode:"15179",nama:"KCP Palu Dewi Sartika"},
+    {kode:"15180",nama:"KCP Tentena"},{kode:"15181",nama:"KCP Kotaraya"},
+    {kode:"15182",nama:"KCP Buol"},{kode:"15184",nama:"KCP Parigi Tolai"},
+    {kode:"15185",nama:"KCP Banggai Bunta"},{kode:"15186",nama:"KCP Banggai Laut"},
+    {kode:"15187",nama:"KCP Morowali Beteleme"},{kode:"15188",nama:"KCP Toli Toli Soni"},
+    {kode:"15189",nama:"KCP Morowali Bungku"},{kode:"15190",nama:"KCP Banggai Kepulauan"},
+    {kode:"15191",nama:"KCP Sigi"}
+  ],
+  "Area Makassar Kartini": [
+    {kode:"15200",nama:"KC Makassar Kartini"},{kode:"15201",nama:"KCP Makassar Sulawesi"},
+    {kode:"15202",nama:"KCP Makassar Cokroaminoto"},{kode:"15203",nama:"KCP Semen Tonasa"},
+    {kode:"15213",nama:"KCP Makassar Slamet Riyadi"},{kode:"15216",nama:"KCP Makassar Daya"},
+    {kode:"15220",nama:"KCP Makassar Andalas"},{kode:"15221",nama:"KCP Makassar Veteran"},
+    {kode:"15225",nama:"KCP Makassar R.S. Stella Maris"},{kode:"15237",nama:"KCP Makassar Universitas Hasanuddin"},
+    {kode:"15238",nama:"KCP Makassar Pelabuhan Indonesia"},{kode:"15242",nama:"KCP Makassar Pasar Sentral"},
+    {kode:"15243",nama:"KCP Makassar Sombaopu"},{kode:"15244",nama:"KCP Pangkep Hasanuddin"},
+    {kode:"15245",nama:"KCP Makassar Pusat Grosir Daya"},{kode:"15246",nama:"KCP Makassar Perintis Kemerdekaan"},
+    {kode:"15248",nama:"KCP Maros Sudirman"},{kode:"15249",nama:"KCP Makassar Urip Sumoharjo"},
+    {kode:"15250",nama:"KCP Makassar Monginsidi"},{kode:"15251",nama:"KCP Makassar CPI"},
+    {kode:"15252",nama:"KCP Makassar Latimojong"},{kode:"15269",nama:"KCP Maros Camba"},
+    {kode:"15271",nama:"KCP Makassar Pannampu"},{kode:"15291",nama:"KCP Makassar BTP"},
+    {kode:"15293",nama:"KCP Makassar Paccerakkang"},{kode:"15297",nama:"KCP Makassar Sudiang"}
+  ],
+  "Area Kendari": [
+    {kode:"16200",nama:"KC Kendari Mesjid Agung"},{kode:"16201",nama:"KCP Kendari Beach"},
+    {kode:"16202",nama:"KCP Bau Bau"},{kode:"16203",nama:"KC Pomalaa"},
+    {kode:"16204",nama:"KCP Kolaka"},{kode:"16205",nama:"KCP Wua Wua"},
+    {kode:"16206",nama:"KCP Kolaka Utara"},{kode:"16207",nama:"KCP Kendari Bundaran Anduonohu"},
+    {kode:"16208",nama:"KCP Kendari Lepo-Lepo"},{kode:"16210",nama:"KCP Morosi"},
+    {kode:"16275",nama:"KCP Kendari Andunouhu"},{kode:"16276",nama:"KCP Tinanggea"},
+    {kode:"16277",nama:"KCP Pasarwajo"},{kode:"16278",nama:"KCP Molawe"},
+    {kode:"16279",nama:"KCP Raha"},{kode:"16280",nama:"KCP Bombana"},
+    {kode:"16281",nama:"KCP Unaaha"},{kode:"16282",nama:"KCP Buton Lombe"},
+    {kode:"16283",nama:"KCP Baubau Wolio"},{kode:"16284",nama:"KCP Rate Rate"},
+    {kode:"16285",nama:"KCP Lapai"}
+  ],
+  "Area Pare Pare": [
+    {kode:"17000",nama:"KC Pare Pare"},{kode:"17001",nama:"KCP Pinrang"},
+    {kode:"17002",nama:"KCP Polewali Mandar"},{kode:"17003",nama:"KCP Pare-Pare Pattompo"},
+    {kode:"17004",nama:"KCP Mamuju"},{kode:"17005",nama:"KC Watampone"},
+    {kode:"17006",nama:"KCP Sengkang"},{kode:"17007",nama:"KC Palopo"},
+    {kode:"17008",nama:"KCP Rantepao"},{kode:"17009",nama:"KC Soroako"},
+    {kode:"17010",nama:"KCP Sidrap Sudirman"},{kode:"17011",nama:"KCP Sinjai Pasar Sentral"},
+    {kode:"17015",nama:"KCP Kahu"},{kode:"17016",nama:"KCP Majene"},
+    {kode:"17075",nama:"KCP Topoyo"},{kode:"17076",nama:"KCP Sidrap"},
+    {kode:"17077",nama:"KCP Siwa"},{kode:"17078",nama:"KCP Soppeng"},
+    {kode:"17079",nama:"KCP Belopa"},{kode:"17080",nama:"KCP Masamba"},
+    {kode:"17082",nama:"KCP Barru"},{kode:"17083",nama:"KCP Tomoni"},
+    {kode:"17084",nama:"KCP Malili"},{kode:"17085",nama:"KCP Polewali Mandar Pekkabata"},
+    {kode:"17087",nama:"KCP Toraja Makale"},{kode:"17088",nama:"KCP Enrekang Pasar Sudu"},
+    {kode:"17091",nama:"KCP Bone Bone"}
+  ],
+  "Area Makassar Ratulangi": [
+    {kode:"17400",nama:"KC Makassar Sam Ratulangi"},{kode:"17401",nama:"KCP Makassar Panakkukang"},
+    {kode:"17402",nama:"KCP Makassar Hertasning"},{kode:"17403",nama:"KCP Sungguminasa"},
+    {kode:"17404",nama:"KCP Makassar Cendrawasih"},{kode:"17406",nama:"KCP Makassar Toddopuli"},
+    {kode:"17407",nama:"KCP Bulukumba"},{kode:"17408",nama:"KCP Makassar Pettarani"},
+    {kode:"17409",nama:"KCP Makassar Veteran Selatan"},{kode:"17410",nama:"KCP Bantaeng Pahlawan"},
+    {kode:"17411",nama:"KCP Jeneponto"},{kode:"17451",nama:"KCP Selayar"},
+    {kode:"17452",nama:"KCP Gowa Malino"},{kode:"17453",nama:"KCP Bantaeng Tanetea"},
+    {kode:"17454",nama:"KCP Takalar"},{kode:"17455",nama:"KCP Limbung"},
+    {kode:"17456",nama:"KCP Hartaco"},{kode:"17457",nama:"KCP Antang"},
+    {kode:"17458",nama:"KCP Gowa Pallangga"},{kode:"17459",nama:"KCP Gowa Balang-Balang"},
+    {kode:"17462",nama:"KCP Bulukumba Tanete"},{kode:"17463",nama:"KCP Barombong"}
+  ],
+  "Area Maluku": [
+    {kode:"18600",nama:"KC Ambon Pantai Mardika"},{kode:"18601",nama:"KC Ambon Pattimura"},
+    {kode:"18602",nama:"KC Ternate"},{kode:"18603",nama:"KCP Ambon Paso"},
+    {kode:"18604",nama:"KCP Ambon Masohi"},{kode:"18605",nama:"KCP Ambon Namlea"},
+    {kode:"18607",nama:"KCP Maluku Tenggara"},{kode:"18608",nama:"KCP Ternate Pahlawan Revolusi"},
+    {kode:"18609",nama:"KCP Buli"},{kode:"18610",nama:"KCP Tobelo"},
+    {kode:"18611",nama:"KCP Sofifi"},{kode:"18612",nama:"KCP Ambon Universitas Pattimura"},
+    {kode:"18613",nama:"KCP Indonesia Weda Bay Industrial Park"},{kode:"18651",nama:"KCP Bula"},
+    {kode:"18652",nama:"KCP Gemba"},{kode:"18654",nama:"KCP Waeapo"},
+    {kode:"18655",nama:"KCP Wayame"},{kode:"18656",nama:"KCP Saumlaki"},
+    {kode:"18657",nama:"KCP Ternate Bastiong"},{kode:"18658",nama:"KCP Labuha"},
+    {kode:"18659",nama:"KCP Weda"},{kode:"18660",nama:"KCP Jailolo"},
+    {kode:"18661",nama:"KCP Obi"}
+  ]
+};
+
+// ── Init ────────────────────────────────────────────────────────
+window.onload = function() {
+  // Set tanggal hari ini
+  var d = new Date();
+  document.getElementById('tanggalLaporan').value =
+    d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+
+  // Isi dropdown Area
+  var sel = document.getElementById('selectArea');
+  Object.keys(DATA_CABANG).sort().forEach(function(area) {
+    var o = document.createElement('option');
+    o.value = area; o.textContent = area;
+    sel.appendChild(o);
+  });
+
+  // Live update total
+  ['jumlahLVM','jumlahEDC'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', updateTotal);
+  });
+};
+
+// ── Cascade: Area → Cabang ──────────────────────────────────────
+document.getElementById('selectArea').addEventListener('change', function() {
+  var area = this.value;
+  var sc = document.getElementById('selectCabang');
+  sc.innerHTML = '<option value="">-- Pilih Cabang --</option>';
+  sc.disabled = !area;
+  document.getElementById('infoCabang').classList.remove('show');
+  document.getElementById('kodeCabang').value = '';
+  document.getElementById('namaCabang').value = '';
+  document.getElementById('areaValue').value = area;
+  if (!area) return;
+  (DATA_CABANG[area] || []).forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c.kode;
+    o.dataset.nama = c.nama;
+    o.textContent = c.kode + ' — ' + c.nama;
+    sc.appendChild(o);
+  });
+  clearErr('f-area');
+});
+
+document.getElementById('selectCabang').addEventListener('change', function() {
+  var opt = this.options[this.selectedIndex];
+  var kode = this.value;
+  var nama = opt ? (opt.dataset.nama || '') : '';
+  document.getElementById('kodeCabang').value = kode;
+  document.getElementById('namaCabang').value = nama;
+  if (kode) {
+    document.getElementById('labelCabang').textContent = kode + ' · ' + nama;
+    document.getElementById('infoCabang').classList.add('show');
+    clearErr('f-cabang');
+  } else {
+    document.getElementById('infoCabang').classList.remove('show');
+  }
+});
+
+function updateTotal() {
+  var l = parseInt(document.getElementById('jumlahLVM').value) || 0;
+  var e = parseInt(document.getElementById('jumlahEDC').value) || 0;
+  document.getElementById('totalAkuisisi').textContent = l + e;
+}
+
+// ── Validasi ────────────────────────────────────────────────────
+function validasi() {
+  var ok = true;
+  [
+    {wrap:'f-tanggal', id:'tanggalLaporan'},
+    {wrap:'f-area',    id:'selectArea'},
+    {wrap:'f-cabang',  id:'selectCabang'},
+    {wrap:'f-lvm',     id:'jumlahLVM'},
+    {wrap:'f-edc',     id:'jumlahEDC'},
+    {wrap:'f-plvm',    id:'jumlahPemasanganLVM'},
+    {wrap:'f-redc',    id:'jumlahRetensiEDC'}
+  ].forEach(function(f) {
+    var el = document.getElementById(f.id);
+    var wrap = document.getElementById(f.wrap);
+    if (!el.value || el.value === '') {
+      wrap.classList.add('field-invalid');
+      wrap.querySelector('.error-msg').classList.add('show');
+      ok = false;
+    } else {
+      wrap.classList.remove('field-invalid');
+      wrap.querySelector('.error-msg').classList.remove('show');
+    }
+  });
+  return ok;
+}
+
+function clearErr(wrapId) {
+  var w = document.getElementById(wrapId);
+  if (w) {
+    w.classList.remove('field-invalid');
+    var e = w.querySelector('.error-msg');
+    if (e) e.classList.remove('show');
+  }
+}
+
+// ── Submit ──────────────────────────────────────────────────────
+document.getElementById('formLaporan').addEventListener('submit', function(ev) {
+  ev.preventDefault();
+  if (!validasi()) {
+    var first = document.querySelector('.field-invalid input, .field-invalid select');
+    if (first) first.scrollIntoView({behavior:'smooth', block:'center'});
+    return;
+  }
+
+  document.getElementById('loadingOverlay').classList.add('show');
+  document.getElementById('btnSubmit').disabled = true;
+
+  var params = new URLSearchParams({
+    action          : 'submit',
+    tanggal         : document.getElementById('tanggalLaporan').value,
+    area            : document.getElementById('areaValue').value,
+    kodeCabang      : document.getElementById('kodeCabang').value,
+    namaCabang      : document.getElementById('namaCabang').value,
+    jumlahLVM       : document.getElementById('jumlahLVM').value || '0',
+    jumlahEDC       : document.getElementById('jumlahEDC').value || '0',
+    jumlahPemasanganLVM : document.getElementById('jumlahPemasanganLVM').value || '0',
+    jumlahRetensiEDC    : document.getElementById('jumlahRetensiEDC').value || '0',
+    kendala         : document.getElementById('kendala').value.trim() || '-',
+    keterangan      : document.getElementById('keterangan').value.trim() || '-'
+  });
+
+  fetch(APPS_SCRIPT_URL + '?' + params.toString())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success && data.idLaporan) {
+        window.location.href = 'laporan.html?id=' + data.idLaporan;
+      } else {
+        throw new Error(data.error || 'Respons tidak valid dari server.');
+      }
+    })
+    .catch(function(err) {
+      document.getElementById('loadingOverlay').classList.remove('show');
+      document.getElementById('btnSubmit').disabled = false;
+      alert('❌ Gagal menyimpan laporan:\n' + err.message + '\n\nPastikan URL Apps Script sudah benar di file index.html.');
+    });
+});
+</script>
+</body>
+</html>
