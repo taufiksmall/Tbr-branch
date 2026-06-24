@@ -229,6 +229,12 @@
         </div>
       </div>
 
+      <div class="field" id="f-edcpot" style="margin-top:16px;">
+        <label>Jumlah Akuisisi EDC POT <span class="wajib">*</span></label>
+        <input type="number" id="jumlahEDCPOT" placeholder="0" min="0" value="0" required>
+        <div class="error-msg">Wajib diisi.</div>
+      </div>
+
       <div class="total-box">
         <div class="label">Total Akuisisi</div>
         <div class="value" id="totalAkuisisi">0</div>
@@ -412,7 +418,7 @@ window.onload = function() {
   });
 
   // Live update total
-  ['jumlahLVM','jumlahEDC'].forEach(function(id) {
+  ['jumlahLVM','jumlahEDC','jumlahEDCPOT'].forEach(function(id) {
     document.getElementById(id).addEventListener('input', updateTotal);
   });
 };
@@ -456,7 +462,8 @@ document.getElementById('selectCabang').addEventListener('change', function() {
 function updateTotal() {
   var l = parseInt(document.getElementById('jumlahLVM').value) || 0;
   var e = parseInt(document.getElementById('jumlahEDC').value) || 0;
-  document.getElementById('totalAkuisisi').textContent = l + e;
+  var p = parseInt(document.getElementById('jumlahEDCPOT').value) || 0;
+  document.getElementById('totalAkuisisi').textContent = l + e + p;
 }
 
 // ── Validasi ────────────────────────────────────────────────────
@@ -468,6 +475,7 @@ function validasi() {
     {wrap:'f-cabang',  id:'selectCabang'},
     {wrap:'f-lvm',     id:'jumlahLVM'},
     {wrap:'f-edc',     id:'jumlahEDC'},
+    {wrap:'f-edcpot',  id:'jumlahEDCPOT'},
     {wrap:'f-plvm',    id:'jumlahPemasanganLVM'},
     {wrap:'f-redc',    id:'jumlahRetensiEDC'}
   ].forEach(function(f) {
@@ -514,6 +522,7 @@ document.getElementById('formLaporan').addEventListener('submit', function(ev) {
     namaCabang      : document.getElementById('namaCabang').value,
     jumlahLVM       : document.getElementById('jumlahLVM').value || '0',
     jumlahEDC       : document.getElementById('jumlahEDC').value || '0',
+    jumlahEDCPOT    : document.getElementById('jumlahEDCPOT').value || '0',
     jumlahPemasanganLVM : document.getElementById('jumlahPemasanganLVM').value || '0',
     jumlahRetensiEDC    : document.getElementById('jumlahRetensiEDC').value || '0',
     kendala         : document.getElementById('kendala').value.trim() || '-',
