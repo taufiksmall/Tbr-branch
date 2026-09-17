@@ -97,6 +97,30 @@
     }
     textarea { resize: vertical; min-height: 76px; font-weight: 500; font-size: 16px; }
 
+    input[type="file"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 500;
+      color: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.05);
+    }
+    input[type="file"]::file-selector-button {
+      margin-right: 12px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #4472ef, #2b4fd6);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
     .cabang-info {
       align-items: center; gap: 8px;
       margin-top: 9px;
@@ -386,6 +410,23 @@
       </div>
     </div>
 
+    <!-- Foto Kunjungan -->
+    <div class="card">
+      <div class="card-title-row">
+        <span class="name">Foto Kunjungan</span>
+      </div>
+
+      <div class="field" id="f-foto">
+        <label>Foto Hasil Kunjungan <span class="wajib">*</span></label>
+        <input type="file" id="fotoKunjungan" accept="image/*">
+        <div class="error-msg">Foto wajib diisi.</div>
+        <div id="previewFotoWrap" style="display:none;margin-top:12px;">
+          <img id="previewFoto" alt="Preview foto kunjungan" style="width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);display:block;">
+          <button type="button" id="btnHapusFoto" style="margin-top:8px;background:none;border:none;color:#ff8fa3;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline;padding:0;">Hapus &amp; pilih ulang</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Link ke Monitoring Top 100 Leakage -->
     <a id="linkMonitoringLeakage" href="monitoring-top100-leakage.html" style="display:none;margin:16px 0 0;padding:16px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;text-decoration:none;align-items:center;justify-content:space-between;gap:10px;">
       <span style="font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg>Monitoring Top 100 Leakage</span>
@@ -593,17 +634,26 @@ var FIELD_DRAFT_SEDERHANA = [
   'jumlahTransaksiLivinFood', 'kendala', 'keterangan'
 ];
 
+// Foto disimpan sebagai data URL di variabel JS (bukan cuma di
+// <input type="file">) karena alasan keamanan browser TIDAK BISA
+// mengisi ulang .value sebuah file input lewat JS — jadi draft restore
+// foto hasil kunjungan (lihat pemuatDraft()) taruh datanya di sini,
+// bukan balikin ke elemen <input>.
+var FOTO_DATA_URL = '';
+
 function simpanDraft() {
   var draft = { area: document.getElementById('areaValue').value, kodeCabang: document.getElementById('kodeCabang').value };
   FIELD_DRAFT_SEDERHANA.forEach(function(id) {
     draft[id] = document.getElementById(id).value;
   });
   draft.namaMerchantLivinFood = document.getElementById('namaMerchantLivinFood').value;
+  draft.fotoDataUrl = FOTO_DATA_URL;
   try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage penuh/nonaktif, abaikan */ }
 }
 
 function hapusDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* abaikan */ }
+  FOTO_DATA_URL = '';
 }
 
 // Return true kalau ada draft yang berhasil dipulihkan.
@@ -630,10 +680,75 @@ function pemuatDraft() {
   if (draft.namaMerchantLivinFood) {
     document.getElementById('namaMerchantLivinFood').value = draft.namaMerchantLivinFood;
   }
+  if (draft.fotoDataUrl) {
+    FOTO_DATA_URL = draft.fotoDataUrl;
+    tampilkanPreviewFoto();
+  }
 
   updateTotal();
   return true;
 }
+
+// ── Foto Kunjungan ──────────────────────────────────────────────
+// Foto dikompres dulu di browser (resize max 1600px, JPEG kualitas .72)
+// sebelum diubah ke base64 — foto asli dari kamera HP bisa 3-10MB, kalau
+// dikirim mentah bakal berat banget buat koneksi cabang & jelek buat
+// kuota storage Drive. Hasil kompresnya masih cukup jelas dibaca.
+function resizeFoto(file, maxDim, kualitas) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', kualitas));
+      };
+      img.onerror = function() { reject(new Error('Gagal membaca gambar. Coba foto lain.')); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function() { reject(new Error('Gagal membaca file.')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function tampilkanPreviewFoto() {
+  var wrap = document.getElementById('previewFotoWrap');
+  var img = document.getElementById('previewFoto');
+  if (FOTO_DATA_URL) {
+    img.src = FOTO_DATA_URL;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    img.src = '';
+  }
+}
+
+document.getElementById('fotoKunjungan').addEventListener('change', function(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  resizeFoto(file, 1600, 0.72).then(function(dataUrl) {
+    FOTO_DATA_URL = dataUrl;
+    tampilkanPreviewFoto();
+    clearErr('f-foto');
+    simpanDraft();
+  }).catch(function(err) {
+    alert(err.message);
+  });
+});
+
+document.getElementById('btnHapusFoto').addEventListener('click', function() {
+  FOTO_DATA_URL = '';
+  document.getElementById('fotoKunjungan').value = '';
+  tampilkanPreviewFoto();
+  simpanDraft();
+});
 
 // Simpan draft tiap ada perubahan di dalam form manapun (delegasi, jadi
 // otomatis nyakup semua field termasuk yang muncul belakangan seperti
@@ -787,6 +902,19 @@ function validasi() {
       wrap.querySelector('.error-msg').classList.remove('show');
     }
   });
+
+  // Foto bukan <input> biasa (nilainya di variabel FOTO_DATA_URL, lihat
+  // komentar di dekat deklarasinya), jadi dicek terpisah dari loop di atas.
+  var wrapFoto = document.getElementById('f-foto');
+  if (!FOTO_DATA_URL) {
+    wrapFoto.classList.add('field-invalid');
+    wrapFoto.querySelector('.error-msg').classList.add('show');
+    ok = false;
+  } else {
+    wrapFoto.classList.remove('field-invalid');
+    wrapFoto.querySelector('.error-msg').classList.remove('show');
+  }
+
   return ok;
 }
 
@@ -812,7 +940,15 @@ document.getElementById('formLaporan').addEventListener('submit', function(ev) {
   document.getElementById('loadingOverlay').classList.add('show');
   document.getElementById('btnSubmit').disabled = true;
 
-  var params = new URLSearchParams({
+  // Foto (base64) dikirim lewat POST, bukan query string GET seperti
+  // field lain — kepanjangan buat URL kalau lewat GET. Content-Type
+  // sengaja "text/plain" (bukan application/json) supaya browser TIDAK
+  // ngirim preflight OPTIONS, yang tidak didukung Apps Script Web App.
+  var fotoBase64 = FOTO_DATA_URL.split(',')[1] || '';
+  var fotoMimeMatch = FOTO_DATA_URL.match(/^data:([^;]+);/);
+  var fotoMime = fotoMimeMatch ? fotoMimeMatch[1] : 'image/jpeg';
+
+  var payload = {
     action          : 'submit',
     tanggal         : document.getElementById('tanggalLaporan').value,
     area            : document.getElementById('areaValue').value,
@@ -829,10 +965,16 @@ document.getElementById('formLaporan').addEventListener('submit', function(ev) {
     namaMerchantLivinFood    : document.getElementById('namaMerchantLivinFood').value || '-',
     jumlahTransaksiLivinFood : document.getElementById('jumlahTransaksiLivinFood').value || '0',
     kendala         : document.getElementById('kendala').value.trim() || '-',
-    keterangan      : document.getElementById('keterangan').value.trim() || '-'
-  });
+    keterangan      : document.getElementById('keterangan').value.trim() || '-',
+    fotoBase64      : fotoBase64,
+    fotoMime        : fotoMime
+  };
 
-  fetch(APPS_SCRIPT_URL + '?' + params.toString())
+  fetch(APPS_SCRIPT_URL, {
+    method  : 'POST',
+    headers : { 'Content-Type': 'text/plain;charset=utf-8' },
+    body    : JSON.stringify(payload)
+  })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.maintenance) {

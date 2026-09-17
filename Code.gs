@@ -225,6 +225,48 @@ function doGet(e) {
   return jsonResponse({ status: 'API aktif', versi: '2.5' });
 }
 
+/**
+ * Submit laporan harian LEWAT POST — dipakai khusus akuisisi-harian.html
+ * karena laporan sekarang wajib menyertakan foto hasil kunjungan (base64),
+ * yang kepanjangan buat dikirim sebagai query string lewat doGet biasa.
+ * Body dikirim sebagai JSON dengan Content-Type "text/plain" (bukan
+ * application/json) supaya browser TIDAK mengirim preflight OPTIONS —
+ * Apps Script Web App tidak punya handler doOptions, jadi preflight
+ * bakal gagal kalau pakai application/json.
+ */
+function doPost(e) {
+  var data;
+  try {
+    data = JSON.parse(e.postData.contents);
+  } catch (err) {
+    return jsonResponse({ success: false, error: 'Body request tidak valid (bukan JSON).' });
+  }
+
+  var action = data.action || 'submit';
+
+  if (action !== 'cekMaintenance' && isMaintenanceAktif()) {
+    return jsonResponse({
+      maintenance : true,
+      pesan       : 'Sistem sedang dalam pemeliharaan data. Coba lagi beberapa saat lagi.'
+    });
+  }
+
+  if (action === 'submit') {
+    try {
+      if (!data.fotoBase64) {
+        return jsonResponse({ success: false, error: 'Foto hasil kunjungan wajib diisi.' });
+      }
+      data.fotoUrl = simpanFotoKunjungan(data.fotoBase64, data.fotoMime, data.kodeCabang, data.tanggal);
+      var result = prosesSubmit(data);
+      return jsonResponse({ success: true, idLaporan: result.idLaporan });
+    } catch (err) {
+      return jsonResponse({ success: false, error: err.message });
+    }
+  }
+
+  return jsonResponse({ success: false, error: 'Action POST tidak dikenal: ' + action });
+}
+
 // Helper: buat JSON response
 function jsonResponse(obj) {
   return ContentService
@@ -256,6 +298,7 @@ function prosesSubmit(p) {
   var namaMerchantLivinFood = p.namaMerchantLivinFood || '-';
   var kendala          = p.kendala          || '-';
   var keterangan       = p.keterangan       || '-';
+  var fotoUrl          = p.fotoUrl          || '-';
   var totalAkuisisi    = jumlahLVM + jumlahEDC + jumlahEDCPOT;
   var tanggalFormatted = formatTanggal(tanggal);
   var timestamp        = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
@@ -276,7 +319,7 @@ function prosesSubmit(p) {
     totalLeadsCakra, totalKunjunganCakra, gapCakra,
     jumlahLivinFood, namaMerchantLivinFood,
     updatesEDCLVM,
-    kendala, keterangan
+    kendala, keterangan, fotoUrl
   );
 
   // URL laporan (di GitHub Pages) — diisi kosong, ditentukan di sisi frontend
@@ -293,6 +336,7 @@ function prosesSubmit(p) {
 
   // Susun baris berdasarkan NAMA HEADER asli di sheet (bukan posisi tetap),
   // supaya aman walau urutan kolom "Jumlah Akuisisi EDC POT" berbeda-beda.
+  pastikanKolomAda(sheet, 'Foto Kunjungan');
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var nilaiKolom = {
     'Timestamp'               : timestamp,
@@ -315,6 +359,7 @@ function prosesSubmit(p) {
     'Status Progress EDC to LVM'   : ringkasanStatusEDCLVM,
     'Kendala'                 : kendala,
     'Keterangan'              : keterangan,
+    'Foto Kunjungan'          : fotoUrl,
     'ID Laporan'              : idLaporan,
     'Teks WA'                 : teksWA,
     'Link Laporan'            : linkLaporan
@@ -391,6 +436,7 @@ function cariLaporan(idLaporan) {
         ),
         kendala             : row[headers.indexOf('Kendala')]            || '-',
         keterangan          : row[headers.indexOf('Keterangan')]         || '-',
+        fotoUrl             : row[headers.indexOf('Foto Kunjungan')]     || '-',
         teksWA              : row[headers.indexOf('Teks WA')]            || ''
       };
     }
@@ -401,7 +447,7 @@ function cariLaporan(idLaporan) {
 // ============================================================
 // SUSUN TEKS WHATSAPP
 // ============================================================
-function susunTeksWA(tanggal, area, cabang, kode, lvm, edc, edcPot, total, plasLVM, retEDC, leadsCakra, kunjunganCakra, gapCakra, livinFood, namaMerchant, updatesEDCLVM, kendala, keterangan) {
+function susunTeksWA(tanggal, area, cabang, kode, lvm, edc, edcPot, total, plasLVM, retEDC, leadsCakra, kunjunganCakra, gapCakra, livinFood, namaMerchant, updatesEDCLVM, kendala, keterangan, fotoUrl) {
   var t = '';
   t += 'Mohon izin melaporkan hasil akuisisi harian:\n\n';
   t += '```\n';
@@ -443,6 +489,9 @@ function susunTeksWA(tanggal, area, cabang, kode, lvm, edc, edcPot, total, plasL
   t += 'Kendala    : ' + kendala + '\n';
   t += 'Keterangan : ' + keterangan + '\n';
   t += '```\n\n';
+  if (fotoUrl && fotoUrl !== '-') {
+    t += '📷 Foto Kunjungan: ' + fotoUrl + '\n\n';
+  }
   t += 'Terima kasih.';
   return t;
 }
@@ -450,6 +499,47 @@ function susunTeksWA(tanggal, area, cabang, kode, lvm, edc, edcPot, total, plasL
 // ============================================================
 // HELPER FUNCTIONS (BAGIAN A)
 // ============================================================
+
+// Simpan foto hasil kunjungan (base64, sudah dikompres di sisi browser)
+// ke folder Drive khusus, bikin bisa diakses lewat link (view-only), lalu
+// balikin URL-nya buat ditulis ke kolom "Foto Kunjungan" di sheet.
+// Sengaja pakai format "uc?export=view&id=..." (bukan file.getUrl(), yang
+// balikin URL halaman VIEWER Drive) supaya bisa langsung dipasang di
+// <img src="..."> di laporan.html — sekaligus tetap bisa dibuka manual
+// di browser/WhatsApp.
+function simpanFotoKunjungan(base64, mime, kodeCabang, tanggal) {
+  var folder = getOrCreateFolderFotoKunjungan();
+  var mimeType = mime || 'image/jpeg';
+  var bytes = Utilities.base64Decode(base64);
+  var ekstensi = mimeType.indexOf('png') !== -1 ? 'png' : 'jpg';
+  var namaFile = 'Kunjungan_' + (kodeCabang || 'XXXXX') + '_' + (tanggal || 'tanggal') + '_' + new Date().getTime() + '.' + ekstensi;
+  var blob = Utilities.newBlob(bytes, mimeType, namaFile);
+  var file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return 'https://drive.google.com/uc?export=view&id=' + file.getId();
+}
+
+function getOrCreateFolderFotoKunjungan() {
+  var namaFolder = 'Foto Kunjungan Akuisisi Harian - TBRX Report';
+  var folders = DriveApp.getFoldersByName(namaFolder);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(namaFolder);
+}
+
+// Nambahin kolom baru di akhir sheet kalau header-nya belum ada — dipakai
+// buat 'Foto Kunjungan' supaya fitur ini langsung jalan tanpa admin perlu
+// nambahin kolomnya manual dulu di sheet (beda dari kolom "Cabang" di
+// sheet Leakage yang masih manual, karena data foto WAJIB diisi jadi
+// nggak boleh diam-diam hilang kalau kolomnya lupa dibikin).
+function pastikanKolomAda(sheet, namaKolom) {
+  var lastCol = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (headers.indexOf(namaKolom) !== -1) return;
+  sheet.getRange(1, lastCol + 1)
+    .setValue(namaKolom)
+    .setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+}
+
 function generateID(kodeCabang) {
   var now = new Date();
   var tgl = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyyMMdd');
@@ -494,7 +584,7 @@ function getOrCreateSheet(ss) {
       'Total Leads Cakra', 'Total Kunjungan Cakra', 'Gap (sesuai Cakra)',
       "Jumlah Transaksi Livin' Food",
       "Nama Merchant Livin' Food",
-      'Kendala', 'Keterangan', 'ID Laporan', 'Teks WA', 'Link Laporan'
+      'Kendala', 'Keterangan', 'Foto Kunjungan', 'ID Laporan', 'Teks WA', 'Link Laporan'
     ];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.getRange(1, 1, 1, headers.length)

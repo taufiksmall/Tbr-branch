@@ -251,6 +251,14 @@
       </div>
     </div>
 
+    <!-- Foto Kunjungan -->
+    <div class="card" id="cardFotoKunjungan" style="display:none;">
+      <div class="card-title">Foto Kunjungan</div>
+      <a id="linkFotoKunjungan" href="#" target="_blank" rel="noopener">
+        <img id="imgFotoKunjungan" alt="Foto hasil kunjungan" style="width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);display:block;">
+      </a>
+    </div>
+
     <!-- Statistik -->
     <div class="card">
       <div class="card-title">Hasil Akuisisi &amp; Pemasangan</div>
@@ -438,6 +446,11 @@ function tampilkanLaporan(d) {
   document.getElementById('infoArea').textContent = d.area || '-';
   document.getElementById('infoCabang').textContent = d.namaCabang;
   document.getElementById('infoKode').textContent = d.kodeCabang;
+  if (d.fotoUrl && d.fotoUrl !== '-') {
+    document.getElementById('imgFotoKunjungan').src = d.fotoUrl;
+    document.getElementById('linkFotoKunjungan').href = d.fotoUrl;
+    document.getElementById('cardFotoKunjungan').style.display = 'block';
+  }
   document.getElementById('statLVM').textContent = formatAngka(d.jumlahLVM);
   document.getElementById('statEDC').textContent = formatAngka(d.jumlahEDC);
   document.getElementById('statEDCPOT').textContent = formatAngka(d.jumlahEDCPOT);
