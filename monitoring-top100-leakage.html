@@ -382,7 +382,13 @@ var MODAL_TARGET = null; // { area, merchant } sedang diedit
 
 // Kolom follow up dianggap "kosong" kalau nilainya salah satu ini —
 // dipakai buat nentuin badge Sudah/Belum Follow Up.
-var FIELD_FOLLOWUP = ['keteranganLeakage', 'potensiWinback', 'penawaranPrima', 'penawaranLainnya', 'keteranganFollowUp', 'sumberPipeline', 'ketKonfirmasi'];
+// "ketKonfirmasi" SENGAJA tidak dimasukkan di sini walau termasuk salah
+// satu dari 7 kolom hasil follow up: nilainya "Done" di SEMUA 722 baris
+// data sumber (flag konfirmasi/validasi data dari HQ, bukan penanda
+// follow up cabang), jadi kalau ikut dicek malah bikin badge Sudah/Belum
+// Follow Up selalu "Sudah" buat semua merchant sejak awal import,
+// padahal belum ada follow up baru sama sekali dari cabang.
+var FIELD_FOLLOWUP = ['keteranganLeakage', 'potensiWinback', 'penawaranPrima', 'penawaranLainnya', 'keteranganFollowUp', 'sumberPipeline'];
 function sudahFollowUp(m) {
   return FIELD_FOLLOWUP.some(function(k) {
     var v = m[k];
@@ -396,6 +402,16 @@ function formatAngka(n) {
 function formatRasio(n) {
   return (Math.round(Number(n || 0) * 100) / 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+// Kolom sumber Excel-nya dilabeli "(Rp Jt)" tapi angka mentahnya ternyata
+// Rupiah biasa (bukan sudah dibagi sejuta) — kalau dianggap sudah "Rp Jt"
+// apa adanya, Total Leakage gabungan bisa nembus puluhan kuadriliun
+// (lebih besar dari PDB Indonesia), padahal rata-rata per merchant
+// (Total Leakage dibagi jumlah merchant) masuk akal di angka ratusan
+// juta kalau dianggap Rupiah biasa. Jadi semua nilai finansial dibagi
+// 1 juta dulu sebelum ditampilkan dengan label "Jt".
+function formatRpJt(n) {
+  return (Number(n || 0) / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function escHtml(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -405,10 +421,16 @@ function escAttr(s) {
 
 window.onload = function() {
   var params = new URLSearchParams(window.location.search);
+  // "area" dari URL (deep-link dari index.html) cuma dipakai sebagai
+  // FILTER AWAL di sisi client — datanya sendiri SELALU diambil semua
+  // (712 baris, ringan), supaya dropdown Area di halaman ini tetap bisa
+  // dipindah ke area lain tanpa reload. Kalau ini ikut dikirim sebagai
+  // parameter fetch (server-side filter), DATA_ALL cuma akan berisi 1
+  // area itu terus — dropdown Area jadi cuma nampilin 1 pilihan, gak
+  // bisa pindah ke area lain sama sekali (bug yang sempat kejadian).
   KODE_AREA_FILTER = params.get('area') || '';
 
-  var url = APPS_SCRIPT_URL + '?action=getLeakageAll' +
-    (KODE_AREA_FILTER ? '&area=' + encodeURIComponent(KODE_AREA_FILTER) : '');
+  var url = APPS_SCRIPT_URL + '?action=getLeakageAll';
 
   cekMaintenanceLaluMuat(url);
 
@@ -523,7 +545,7 @@ function render() {
   document.getElementById('statTotal').textContent = formatAngka(cakupan.length);
   document.getElementById('statSudah').textContent = formatAngka(sudah);
   document.getElementById('statBelum').textContent = formatAngka(cakupan.length - sudah);
-  document.getElementById('statTotalLeakage').textContent = formatAngka(Math.round(totalLeakage));
+  document.getElementById('statTotalLeakage').textContent = formatRpJt(totalLeakage);
 
   var wrap = document.getElementById('listLeakage');
   if (!filtered.length) {
@@ -546,8 +568,8 @@ function render() {
         '</div>' +
         '<div class="list-item-info">' + escHtml(m.labelArea) + ' · Rek ' + escHtml(m.noRekSet) + '</div>' +
         '<div class="list-item-fin">' +
-          '<span>SV: <b>Rp ' + formatAngka(m.salesVolume) + ' Jt</b></span>' +
-          '<span>Leakage: <b>Rp ' + formatAngka(m.totalLeakage) + ' Jt</b></span>' +
+          '<span>SV: <b>Rp ' + formatRpJt(m.salesVolume) + ' Jt</b></span>' +
+          '<span>Leakage: <b>Rp ' + formatRpJt(m.totalLeakage) + ' Jt</b></span>' +
           '<span>Ratio: <b>' + formatRasio(m.leakageRatio) + '</b></span>' +
         '</div>' +
         (badgeKet ? '<div style="margin-top:8px;">' + badgeKet + '</div>' : '') +
@@ -570,16 +592,20 @@ function bukaModal(area, merchant) {
   document.getElementById('modalRek').textContent = 'No CIF ' + m.noCif + ' · No Rek ' + m.noRekSet;
 
   document.getElementById('infoBox').innerHTML = '' +
-    '<div class="info-row"><span>Sales Volume</span><span>Rp ' + formatAngka(m.salesVolume) + ' Jt</span></div>' +
-    '<div class="info-row"><span>Incoming Rek Settlement</span><span>Rp ' + formatAngka(m.incomingRek) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Sales Volume</span><span>Rp ' + formatRpJt(m.salesVolume) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Incoming Rek Settlement</span><span>Rp ' + formatRpJt(m.incomingRek) + ' Jt</span></div>' +
     '<div class="info-row"><span>SV/Incoming Ratio</span><span>' + formatRasio(m.svIncomingRatio) + '</span></div>' +
-    '<div class="info-row"><span>Leakage ke Rek Sendiri</span><span>Rp ' + formatAngka(m.leakageRekSendiri) + ' Jt</span></div>' +
-    '<div class="info-row"><span>Leakage ke Rek Pihak Ketiga</span><span>Rp ' + formatAngka(m.leakageRekPihak3) + ' Jt</span></div>' +
-    '<div class="info-row total"><span>Total Leakage</span><span>Rp ' + formatAngka(m.totalLeakage) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Leakage ke Rek Sendiri</span><span>Rp ' + formatRpJt(m.leakageRekSendiri) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Leakage ke Rek Pihak Ketiga</span><span>Rp ' + formatRpJt(m.leakageRekPihak3) + ' Jt</span></div>' +
+    '<div class="info-row total"><span>Total Leakage</span><span>Rp ' + formatRpJt(m.totalLeakage) + ' Jt</span></div>' +
     '<div class="info-row"><span>Leakage Ratio</span><span>' + formatRasio(m.leakageRatio) + '</span></div>';
 
   document.getElementById('fKeteranganLeakage').value = m.keteranganLeakage !== '-' ? m.keteranganLeakage : '';
-  document.getElementById('fPotensiWinback').value = m.potensiWinback !== '-' ? m.potensiWinback : '';
+  // Ditulis di sheet sebagai Rupiah biasa (konsisten sama kolom leakage
+  // lain), tapi ditampilkan/diisi di form dalam satuan Jt biar gampang
+  // diketik cabang — lihat simpanFollowUp() buat konversi baliknya.
+  document.getElementById('fPotensiWinback').value = (m.potensiWinback !== '-' && m.potensiWinback !== '' && !isNaN(Number(m.potensiWinback)))
+    ? (Number(m.potensiWinback) / 1000000) : '';
   document.getElementById('fPenawaranPrima').value = m.penawaranPrima !== '-' ? m.penawaranPrima : '';
   document.getElementById('fPenawaranLainnya').value = m.penawaranLainnya !== '-' ? m.penawaranLainnya : '';
   document.getElementById('fKeteranganFollowUp').value = m.keteranganFollowUp !== '-' ? m.keteranganFollowUp : '';
@@ -601,9 +627,16 @@ function simpanFollowUp() {
   var errBox = document.getElementById('modalError');
   errBox.classList.remove('show');
 
+  // Input "Potensi Winback" diketik cabang dalam satuan Jt (juta) biar
+  // gampang — dikonversi balik ke Rupiah biasa di sini SEBELUM dikirim &
+  // disimpan ke DATA_ALL lokal, supaya konsisten dengan kolom leakage
+  // lain yang semuanya Rupiah biasa (lihat formatRpJt() & bukaModal()).
+  var potensiWinbackInput = document.getElementById('fPotensiWinback').value.trim();
+  var potensiWinbackRupiah = potensiWinbackInput ? Math.round(Number(potensiWinbackInput) * 1000000) : '';
+
   var nilai = {
     keteranganLeakage : document.getElementById('fKeteranganLeakage').value,
-    potensiWinback    : document.getElementById('fPotensiWinback').value.trim(),
+    potensiWinback    : potensiWinbackRupiah,
     penawaranPrima    : document.getElementById('fPenawaranPrima').value,
     penawaranLainnya  : document.getElementById('fPenawaranLainnya').value.trim(),
     keteranganFollowUp: document.getElementById('fKeteranganFollowUp').value.trim(),
