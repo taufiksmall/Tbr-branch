@@ -19,8 +19,8 @@
     }
 
     /* Top brand bar */
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
-    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; flex-wrap: wrap; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .topbar-brand { display: flex; align-items: center; gap: 10px; }
     .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
     .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
@@ -304,28 +304,28 @@
 <body>
 
 <div class="topbar">
-  <div class="topbar-brand">
+  <a class="topbar-brand" href="index.html" style="text-decoration:none;">
     <img src="assets/tbr-logo-white.png" alt="TBRX" class="topbar-mark">
     <div>
       <div class="topbar-title">TBRX Report</div>
       <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
     </div>
-  </div>
+  </a>
   <div class="topbar-nav-group">
-    <a class="topbar-nav" href="monitoring-area.html">Monitoring</a>
-    <a class="topbar-nav" href="index.html">Lanjutkan Laporan →</a>
+    <a class="topbar-nav" href="index.html">Menu</a>
+    <a class="topbar-nav" href="akuisisi-harian.html">Lanjutkan Laporan →</a>
   </div>
 </div>
 
 <div class="container">
 
   <div class="page-head">
-    <a class="breadcrumb" href="index.html">← Lanjutkan Laporan</a>
+    <a class="breadcrumb" href="akuisisi-harian.html">← Lanjutkan Laporan</a>
     <h1 class="page-title">Pipeline Konversi EDC ke LVM</h1>
     <div class="page-subtitle" id="headerSubtitle">Memuat data...</div>
   </div>
 
-  <a href="index.html" class="btn-lanjutkan-top">↩ Lanjutkan Laporan di Form</a>
+  <a href="akuisisi-harian.html" class="btn-lanjutkan-top">↩ Lanjutkan Laporan di Form</a>
 
   <div id="loadingState">
     <div class="spinner"></div>
@@ -414,7 +414,7 @@
       <div style="margin-bottom:16px;"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
       <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;margin-bottom:8px;color:#fff;">Gagal Memuat Data</h2>
       <p style="color:rgba(255,255,255,.55);font-size:13.5px;margin-bottom:20px;" id="errorMsg">Terjadi kesalahan saat mengambil data pipeline.</p>
-      <a href="index.html" class="back-link">← Lanjutkan Laporan</a>
+      <a href="akuisisi-harian.html" class="back-link">← Lanjutkan Laporan</a>
     </div>
   </div>
 
@@ -426,7 +426,7 @@
 
 <!-- Selalu melayang di bawah layar — biar tetap kelihatan walau daftar
      merchant-nya panjang dan user lagi scroll jauh ke bawah. -->
-<a href="index.html" class="fab-lanjutkan">↩ Lanjutkan Laporan</a>
+<a href="akuisisi-harian.html" class="fab-lanjutkan">↩ Lanjutkan Laporan</a>
 
 <!-- Modal update status -->
 <div class="modal-overlay" id="modalOverlay">
@@ -494,7 +494,7 @@ var AREA_FILTER = '';
 var STATUS_FILTER = '';
 var MODAL_TARGET = null; // { kodeCabang, namaMerchant, namaCabang, area } sedang diedit
 
-// ── Data Master Cabang (sama dengan index.html) ──────────────────
+// ── Data Master Cabang (sama dengan akuisisi-harian.html) ─────────
 // Dipakai supaya filter Area selalu pakai 7 area resmi, bukan kolom
 // "Area" di sheet Pipeline yang kadang keisi manual dengan nama cabang
 // (data kotor) — lihat kodeToArea() di bawah.

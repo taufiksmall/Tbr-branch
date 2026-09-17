@@ -18,8 +18,8 @@
       position: relative;
     }
 
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
-    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; flex-wrap: wrap; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .topbar-brand { display: flex; align-items: center; gap: 10px; }
     .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
     .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
@@ -213,28 +213,29 @@
 <body>
 
 <div class="topbar">
-  <div class="topbar-brand">
+  <a class="topbar-brand" href="index.html" style="text-decoration:none;">
     <img src="assets/tbr-logo-white.png" alt="TBRX" class="topbar-mark">
     <div>
       <div class="topbar-title">TBRX Report</div>
       <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
     </div>
-  </div>
+  </a>
   <div class="topbar-nav-group">
-    <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
-    <a class="topbar-nav" href="index.html">Lanjutkan Laporan →</a>
+    <a class="topbar-nav" href="index.html">Menu</a>
+    <a class="topbar-nav" href="pipeline.html">EDC to LVM →</a>
+    <a class="topbar-nav" href="akuisisi-harian.html">Lanjutkan Laporan →</a>
   </div>
 </div>
 
 <div class="container">
 
   <div class="page-head">
-    <a class="breadcrumb" href="index.html">← Lanjutkan Laporan</a>
+    <a class="breadcrumb" href="akuisisi-harian.html">← Lanjutkan Laporan</a>
     <h1 class="page-title">Monitoring Top 100 Leakage</h1>
     <div class="page-subtitle" id="headerSubtitle">Memuat data...</div>
   </div>
 
-  <a href="index.html" class="btn-lanjutkan-top">↩ Lanjutkan Laporan di Form</a>
+  <a href="akuisisi-harian.html" class="btn-lanjutkan-top">↩ Lanjutkan Laporan di Form</a>
 
   <div id="loadingState">
     <div class="spinner"></div>
@@ -315,7 +316,7 @@
   </div>
 </div>
 
-<a href="index.html" class="fab-lanjutkan">↩ Lanjutkan Laporan</a>
+<a href="akuisisi-harian.html" class="fab-lanjutkan">↩ Lanjutkan Laporan</a>
 
 <!-- Modal follow up -->
 <div class="modal-overlay" id="modalOverlay">
@@ -386,7 +387,7 @@
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
 // ================================================================
 
-// ── Data Master Cabang (sama dengan pipeline.html/index.html) ────
+// ── Data Master Cabang (sama dengan pipeline.html/akuisisi-harian.html) ──
 // Dipakai buat nampilin nama resmi cabang ("Kode - Nama") di dropdown
 // filter & modal, dari Kode Cabang mentah yang diisi admin di kolom
 // "Cabang" sheet Pipeline Leakage Top 100.
@@ -559,7 +560,7 @@ function escAttr(s) {
 
 window.onload = function() {
   var params = new URLSearchParams(window.location.search);
-  // "area" dari URL (deep-link dari index.html) cuma dipakai sebagai
+  // "area" dari URL (deep-link dari akuisisi-harian.html) cuma dipakai sebagai
   // FILTER AWAL di sisi client — datanya sendiri SELALU diambil semua
   // (712 baris, ringan), supaya dropdown Area di halaman ini tetap bisa
   // dipindah ke area lain tanpa reload. Kalau ini ikut dikirim sebagai
@@ -567,7 +568,7 @@ window.onload = function() {
   // area itu terus — dropdown Area jadi cuma nampilin 1 pilihan, gak
   // bisa pindah ke area lain sama sekali (bug yang sempat kejadian).
   KODE_AREA_FILTER = params.get('area') || '';
-  // "kode" (Kode Cabang lengkap, mis. "15200") dari index.html — kalau ada,
+  // "kode" (Kode Cabang lengkap, mis. "15200") dari akuisisi-harian.html — kalau ada,
   // pakai ini buat filter awal Cabang, dan turunkan 3 digit pertamanya
   // sebagai filter awal Area juga (biar dropdown Area ikut ke-set benar).
   KODE_CABANG_FILTER = params.get('kode') || '';
