@@ -20,6 +20,7 @@
 
     /* Top brand bar */
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
     .topbar-brand { display: flex; align-items: center; gap: 10px; }
     .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
     .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
@@ -234,7 +235,10 @@
       <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
     </div>
   </div>
-  <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
+  <div class="topbar-nav-group">
+    <a class="topbar-nav" href="monitoring-area.html">Monitoring</a>
+    <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
+  </div>
 </div>
 
 <div class="container">
@@ -380,9 +384,9 @@
       </div>
     </div>
 
-    <!-- Link ke Pipeline EDC to LVM -->
-    <a id="linkPipelineForm" href="pipeline.html" style="display:none;margin:16px 0 0;padding:16px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;text-decoration:none;align-items:center;justify-content:space-between;gap:10px;">
-      <span style="font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Update Progress Konversi EDC to LVM</span>
+    <!-- Link ke Monitoring Top 100 Leakage -->
+    <a id="linkMonitoringLeakage" href="monitoring-top100-leakage.html" style="display:none;margin:16px 0 0;padding:16px;border-radius:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;text-decoration:none;align-items:center;justify-content:space-between;gap:10px;">
+      <span style="font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:7px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg>Monitoring Top 100 Leakage</span>
       <span style="font-size:12px;opacity:.75;">Isian form ini otomatis tersimpan →</span>
     </a>
 
@@ -534,7 +538,22 @@ var DATA_CABANG = {
 };
 
 // ── Init ────────────────────────────────────────────────────────
+// Cek status maintenance di background begitu halaman kebuka — kalau
+// aktif, langsung dialihkan ke maintenance.html. Sengaja tidak nge-block
+// inisialisasi form di bawah (dropdown Area, draft, dll) supaya form tetap
+// kelihatan responsif; begitu hasil cek datang & ternyata maintenance, user
+// langsung dialihkan. Kalau gagal ngecek (network hiccup dll), diamkan
+// saja — jangan sampai user ke-block gara-gara cekMaintenance doang gagal.
+function cekMaintenance() {
+  fetch(APPS_SCRIPT_URL + '?action=cekMaintenance')
+    .then(function(r) { return r.json(); })
+    .then(function(res) { if (res.maintenance) window.location.href = 'maintenance.html'; })
+    .catch(function() {});
+}
+
 window.onload = function() {
+  cekMaintenance();
+
   // Isi dropdown Area
   var sel = document.getElementById('selectArea');
   Object.keys(DATA_CABANG).forEach(function(area) {
@@ -641,20 +660,23 @@ var MERCHANT_LIVIN = {
   'Area Makassar Ratulangi': ['Eksposed', 'Mas Daeng']
 };
 
-// ── Link ke Pipeline Konversi EDC to LVM ──────────────────────────
-// Update progress merchant sekarang dilakukan LANGSUNG di pipeline.html
-// (klik merchant → pilih status → simpan). Form laporan harian ini cuma
-// nampilin link jalan pintas ke sana — laporan WA otomatis narik semua
-// merchant yang statusnya diupdate hari ini, tanpa perlu dipilih manual.
-function hideLinkPipeline() {
-  var link = document.getElementById('linkPipelineForm');
+// ── Link ke Monitoring Top 100 Leakage ────────────────────────────
+// Follow up merchant leakage sekarang dilakukan LANGSUNG di
+// monitoring-top100-leakage.html (klik merchant → isi hasil follow up →
+// simpan). Form laporan harian ini cuma nampilin link jalan pintas ke
+// sana, di-deep-link ke Area cabang yang lagi dipilih (data leakage
+// dikelompokkan per Area, bukan per Kode Cabang — 3 digit pertama Kode
+// Cabang dipakai sebagai kode Area, mis. "15000" -> "150" = Area Manado).
+function hideLinkLeakage() {
+  var link = document.getElementById('linkMonitoringLeakage');
   if (link) link.style.display = 'none';
 }
 
-function updateLinkPipeline(kode) {
-  var link = document.getElementById('linkPipelineForm');
-  if (!link || !kode) { hideLinkPipeline(); return; }
-  link.href = 'pipeline.html?kode=' + encodeURIComponent(kode);
+function updateLinkLeakage(kode) {
+  var link = document.getElementById('linkMonitoringLeakage');
+  if (!link || !kode) { hideLinkLeakage(); return; }
+  var kodeArea = String(kode).substring(0, 3);
+  link.href = 'monitoring-top100-leakage.html?area=' + encodeURIComponent(kodeArea);
   link.style.display = 'flex';
 }
 
@@ -695,7 +717,7 @@ document.getElementById('selectArea').addEventListener('change', function() {
   document.getElementById('namaCabang').value = '';
   document.getElementById('areaValue').value = area;
   hideLivinFoodCard();
-  hideLinkPipeline();
+  hideLinkLeakage();
   if (!area) return;
   (DATA_CABANG[area] || []).forEach(function(c) {
     var o = document.createElement('option');
@@ -718,11 +740,11 @@ document.getElementById('selectCabang').addEventListener('change', function() {
     document.getElementById('infoCabang').classList.add('show');
     clearErr('f-cabang');
     updateLivinFoodCard(kode);
-    updateLinkPipeline(kode);
+    updateLinkLeakage(kode);
   } else {
     document.getElementById('infoCabang').classList.remove('show');
     hideLivinFoodCard();
-    hideLinkPipeline();
+    hideLinkLeakage();
   }
 });
 
@@ -811,6 +833,10 @@ document.getElementById('formLaporan').addEventListener('submit', function(ev) {
   fetch(APPS_SCRIPT_URL + '?' + params.toString())
     .then(function(r) { return r.json(); })
     .then(function(data) {
+      if (data.maintenance) {
+        window.location.href = 'maintenance.html';
+        return;
+      }
       if (data.success && data.idLaporan) {
         hapusDraft();
         window.location.href = 'laporan.html?id=' + data.idLaporan;

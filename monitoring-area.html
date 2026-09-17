@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring Progress Area — TBRX Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <!-- html2canvas: buat "screenshot" tabel Region/Area jadi gambar PNG pas
+       tombol Kirim Laporan diklik (dipakai bareng wording WA). -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, sans-serif;
+      background: radial-gradient(1100px 620px at 50% 4%, #202f5e 0%, #131c3f 38%, #0a0f24 70%, #05070f 100%);
+      color: #fff;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: #2f5fe0; color: #fff; font-size: 11px; font-weight: 800;
+      letter-spacing: .3px; padding: 4px 7px; border-radius: 5px; line-height: 1;
+    }
+    .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
+    .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
+    .topbar-sub { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.45); margin-top: 2px; }
+    .topbar-nav {
+      font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.75);
+      text-decoration: none; padding: 8px 16px; border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px; white-space: nowrap;
+    }
+    .topbar-nav:hover { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.3); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 8px 16px 60px; position: relative; z-index: 1; }
+
+    .page-head { text-align: center; margin: 20px 0 22px; }
+    .page-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: 26px; letter-spacing: -.3px; color: #fff; margin-bottom: 6px; }
+    .page-subtitle { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.55); }
+
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .updated-info { font-size: 12px; color: rgba(255,255,255,.5); }
+    .btn-refresh {
+      padding: 9px 18px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06); color: #fff; font-size: 12.5px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,.12); }
+    .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
+
+    .toolbar-actions { display: flex; align-items: center; gap: 8px; }
+    .btn-wa {
+      padding: 9px 18px; border-radius: 999px; border: 1px solid rgba(37,211,102,.4);
+      background: rgba(37,211,102,.14); color: #5ee08a; font-size: 12.5px; font-weight: 700;
+      font-family: inherit; cursor: pointer; white-space: nowrap;
+    }
+    .btn-wa:hover { background: rgba(37,211,102,.24); }
+    .btn-wa:disabled { opacity: .5; cursor: not-allowed; }
+
+    .wa-area-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .btn-wa-area {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 14px; border-radius: 999px;
+      border: 1px solid rgba(37,211,102,.35); background: rgba(37,211,102,.12);
+      color: #5ee08a; font-size: 11.5px; font-weight: 700; font-family: inherit;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-wa-area:hover { background: rgba(37,211,102,.22); }
+    .btn-wa-area:disabled { opacity: .5; cursor: not-allowed; }
+
+    .table-card {
+      background: rgba(255,255,255,.035);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px -24px rgba(0,0,0,.6);
+    }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    table { border-collapse: collapse; width: 100%; min-width: 1180px; font-size: 12.5px; }
+    th, td { padding: 10px 12px; text-align: center; white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,.06); }
+    thead th {
+      background: #0f1b45; color: #fff; font-weight: 700; font-size: 11.5px;
+      position: sticky; top: 0; z-index: 2;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    thead tr.grp th { background: #0a133a; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: rgba(255,255,255,.85); }
+    thead tr.grp th.grp-fu { background: #16307a; }
+    thead tr.grp th.grp-hasil { background: #1c3f9e; }
+    thead tr.grp th.grp-dtd { background: rgba(94,224,138,.18); color: #86efac; }
+
+    td.col-area { text-align: left; font-weight: 700; color: #fff; position: sticky; left: 0; background: #0d1330; z-index: 1; }
+    thead th.col-area { position: sticky; left: 0; z-index: 3; }
+
+    tbody tr:hover td { background: rgba(255,255,255,.03); }
+    tbody tr:hover td.col-area { background: #131a3d; }
+
+    tr.row-total td { background: rgba(68,114,239,.16); font-weight: 800; color: #fff; border-top: 2px solid rgba(68,114,239,.5); }
+    tr.row-total td.col-area { background: #17255e; }
+
+    tr.row-area { cursor: pointer; }
+    .expand-icon { display: inline-block; width: 12px; margin-right: 6px; color: rgba(255,255,255,.4); transition: transform .15s; }
+    tr.row-area.expanded .expand-icon { transform: rotate(90deg); }
+    .jml-cabang { font-weight: 500; font-size: 11px; color: rgba(255,255,255,.4); margin-left: 4px; }
+
+    tr.row-cabang-wrap { display: none; }
+    tr.row-cabang-wrap.show { display: table-row; }
+    tr.row-cabang-wrap td { padding: 0; background: rgba(0,0,0,.18); }
+
+    table.subtable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    table.subtable th {
+      background: #0a1030; color: rgba(255,255,255,.55); font-weight: 700;
+      font-size: 10px; text-transform: uppercase; letter-spacing: .3px;
+      padding: 7px 12px 7px 30px; position: static;
+    }
+    table.subtable th:first-child { text-align: left; }
+    table.subtable td { padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    table.subtable td.col-cabang { text-align: left; padding-left: 30px; position: static; background: transparent; font-weight: 600; }
+    table.subtable tr:hover td { background: rgba(255,255,255,.03); }
+    .kode-cabang { color: rgba(255,255,255,.35); font-weight: 500; font-size: 10.5px; }
+
+    .num-neg { color: #f87171; }
+    .num-pos { color: #5ee08a; }
+    .pill-fu { font-weight: 700; }
+    .dtd-up   { color: #5ee08a; font-weight: 800; }
+    .dtd-flat { color: rgba(255,255,255,.45); font-weight: 700; }
+    .dtd-down { color: #f87171; font-weight: 800; }
+
+    #loadingState { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.7); }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(255,255,255,.15);
+      border-top-color: #4472ef;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    #errorState { display:none; text-align:center; padding: 50px 20px; }
+
+    .legend { margin-top: 14px; font-size: 11.5px; color: rgba(255,255,255,.45); line-height: 1.7; }
+    .legend b { color: rgba(255,255,255,.7); }
+
+    /* Modal "Laporan siap dikirim" — tombol Kirim di sini yang men-trigger
+       navigator.share() supaya statusnya masih dianggap tap user LANGSUNG
+       (bukan dari promise chain fetch/html2canvas sebelumnya), soalnya
+       browser strict kayak iOS Safari cuma ngizinin share kalau dipicu
+       persis pas user nge-tap, bukan belakangan. */
+    .share-modal-overlay {
+      position: fixed; inset: 0; background: rgba(2,5,16,.72);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; z-index: 999;
+    }
+    .share-modal-card {
+      width: 100%; max-width: 340px; text-align: center;
+      background: #131c3f; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 18px; padding: 20px 20px 22px;
+      box-shadow: 0 24px 60px -20px rgba(0,0,0,.7);
+    }
+    .share-modal-preview {
+      width: 100%; max-height: 220px; object-fit: contain; object-position: top;
+      border-radius: 10px; border: 1px solid rgba(255,255,255,.1); margin-bottom: 14px;
+      background: #fff;
+    }
+    .share-modal-title { font-size: 13.5px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+    .share-modal-warning {
+      text-align: left; font-size: 11.5px; line-height: 1.55; color: #fde68a;
+      background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;
+    }
+    .share-modal-btn {
+      display: block; width: 100%; padding: 11px 14px; border-radius: 999px;
+      font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+      margin-bottom: 9px; border: 1px solid transparent;
+    }
+    /* share-modal-btn-primary = pilihan yang DIREKOMENDASIKAN (hijau,
+       menonjol) — bisa jatuh ke tombol native share ATAU tombol manual,
+       tergantung apakah teks laporannya kepanjangan buat caption WA (lihat
+       _tampilkanModalShare). share-modal-btn-secondary = opsi kedua,
+       sengaja diredupkan biar gak salah pencet. */
+    .share-modal-btn-primary { background: rgba(37,211,102,.16); border-color: rgba(37,211,102,.4); color: #5ee08a; }
+    .share-modal-btn-primary:hover { background: rgba(37,211,102,.26); }
+    .share-modal-btn-secondary { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.55); }
+    .share-modal-btn-secondary:hover { background: rgba(255,255,255,.09); }
+    .share-modal-close {
+      background: none; border: none; color: rgba(255,255,255,.4);
+      font-size: 12px; font-family: inherit; cursor: pointer; padding: 4px; margin-top: 2px;
+    }
+    .share-modal-close:hover { color: rgba(255,255,255,.65); }
+
+    .footer { text-align: center; padding: 34px 16px 4px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,.4); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <img src="assets/tbr-logo-white.png" alt="TBRX" class="topbar-mark">
+    <div>
+      <div class="topbar-title">TBRX Report</div>
+      <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
+    </div>
+  </div>
+  <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
+</div>
+
+<div class="container">
+  <div class="page-head">
+    <h1 class="page-title">Monitoring Progress Pipeline per Area</h1>
+    <div class="page-subtitle" id="headerSubtitle">Follow Up &amp; Hasil Follow Up Akuisisi Merchant</div>
+  </div>
+
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div id="loadingMsg">Memuat data ringkasan...</div>
+  </div>
+
+  <div id="kontenRingkasan" style="display:none;">
+    <div class="toolbar">
+      <div class="updated-info" id="updatedInfo">Terakhir diperbarui: -</div>
+      <div class="toolbar-actions">
+        <button class="btn-wa" id="btnKirimRegion" type="button" onclick="kirimLaporanRegion()">📤 Kirim Laporan Region</button>
+        <button class="btn-refresh" id="btnRefresh" type="button">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="wa-area-row" id="waAreaRow"></div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr class="grp">
+              <th class="col-area" rowspan="2">Area</th>
+              <th rowspan="2">Jumlah Leads<br>Optimalisasi Merchant</th>
+              <th class="grp-fu" colspan="3">Follow Up</th>
+              <th class="grp-hasil" colspan="7">Hasil Follow Up</th>
+              <th class="grp-dtd" rowspan="2">Progress<br>DtD</th>
+            </tr>
+            <tr class="grp">
+              <th class="grp-fu">Jml FU</th>
+              <th class="grp-fu">Sisa Leads</th>
+              <th class="grp-fu">% FU</th>
+              <th class="grp-hasil">Shifting<br>to Optimal</th>
+              <th class="grp-hasil">Konversi<br>Ke LVM</th>
+              <th class="grp-hasil">Tetap Pakai EDC<br>Komit Optimalkan SV</th>
+              <th class="grp-hasil">Penawaran</th>
+              <th class="grp-hasil">Merchant<br>Menolak</th>
+              <th class="grp-hasil">Merchant<br>Tutup</th>
+              <th class="grp-hasil">Perlu Kunjungan<br>MTI</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyArea"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div>💡 Klik baris Area untuk menampilkan rincian per Cabang di dalamnya.</div>
+      <div>📤 Tombol <b>Kirim Laporan</b> menyiapkan teks laporan (Region atau per Area) + otomatis mengunduh gambar tabelnya, lalu membuka WhatsApp tanpa nomor tujuan tertentu — silakan lampirkan gambar yang terunduh secara manual sebelum kirim (WhatsApp tidak bisa menerima gambar dan teks sekaligus lewat link), dan pilih sendiri kontak/grup yang dituju.</div>
+      <div><b>Jumlah Leads</b> merupakan jumlah baris merchant pada sheet Pipeline apa adanya, termasuk merchant yang sudah Shifting to Optimal.</div>
+      <div><b>Sisa Leads</b> dihitung dari Jml FU dikurangi Jumlah Leads (nilai negatif menunjukkan masih terdapat leads berstatus "Target" yang belum ditindaklanjuti).</div>
+      <div><b>Progress DtD</b> merupakan pertambahan Jml FU dibandingkan snapshot hari sebelumnya (Day to Day), dihitung per Cabang kemudian dijumlahkan ke tingkat Area.</div>
+      <div><b>Shifting to Optimal</b> diperbarui berdasarkan data dari EDA dan diinput per Cabang pada sheet "Data Statis Cabang"; kategori lainnya dihitung otomatis berdasarkan Status Progress pada sheet Pipeline EDC to LVM.</div>
+    </div>
+  </div>
+
+  <div id="errorState">
+    <div style="font-size:44px;margin-bottom:16px;">⚠</div>
+    <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin-bottom:8px;color:#fff;">Gagal Memuat Data</h2>
+    <p style="color:rgba(255,255,255,.55);font-size:13.5px;" id="errorMsg">Terjadi kesalahan saat mengambil data ringkasan.</p>
+  </div>
+
+  <div class="footer">
+    Monitoring Progress Pipeline · TBRX Team<br>
+    <span>Copyright &copy; 2026 TBRX Team</span>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// ⚙️ KONFIGURASI — GANTI URL INI DENGAN URL APPS SCRIPT ANDA
+// ================================================================
+var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
+// ================================================================
+
+window.onload = function() {
+  cekMaintenanceLaluMuat();
+  document.getElementById('btnRefresh').addEventListener('click', function() {
+    document.getElementById('btnRefresh').disabled = true;
+    document.getElementById('btnRefresh').textContent = '↻ Memuat...';
+    muatRingkasan(2);
+  });
+};
+
+// Cek dulu status maintenance (request ringan, gak baca sheet Pipeline sama
+// sekali) sebelum manggil getRingkasanArea yang berat. Kalau gagal ngecek
+// (network hiccup dll), tetep lanjut normal — jangan sampai user ke-block
+// gara-gara cekMaintenance doang yang gagal.
+// Tambahin parameter waktu (timestamp) unik + { cache: 'no-store' } di
+// SETIAP fetch ke Apps Script — tanpa ini, browser (atau cache di
+// jaringan/proxy) bisa nyimpen & terus-menerus ngebalikin hasil fetch GET
+// yang lama untuk URL yang persis sama, walau datanya di sheet udah
+// berubah. Ini yang bikin monitoring-area.html sempat masih nampilin Total
+// Leads lama (4.248) padahal endpoint yang dites langsung di tab baru udah
+// bener (4.174) — beda tab = beda cache entry, jadi kelihatan "benar" di
+// satu tempat tapi "salah" di tempat lain.
+function _urlNoCache(url) {
+  var sep = url.indexOf('?') === -1 ? '?' : '&';
+  return url + sep + '_ts=' + Date.now();
+}
+
+function cekMaintenanceLaluMuat() {
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=cekMaintenance'), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      muatRingkasan(3);
+    })
+    .catch(function() { muatRingkasan(3); });
+}
+
+// Sheet Pipeline berisi ribuan baris, jadi request bisa sesekali dibalas
+// halaman HTML (bukan JSON) kalau Apps Script lagi sibuk — coba ulang
+// otomatis sebelum benar-benar menampilkan error.
+function muatRingkasan(sisaPercobaan) {
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=getRingkasanArea'), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res;
+      try { res = JSON.parse(teks); }
+      catch (e) { throw new Error('respons bukan JSON (server sedang sibuk)'); }
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      if (res.error) { tampilkanError(res.error); return; }
+      tampilkanRingkasan(res);
+    })
+    .catch(function(err) {
+      if (sisaPercobaan > 1) {
+        var msg = document.getElementById('loadingMsg');
+        if (msg) msg.textContent = 'Server sedang sibuk, mencoba lagi...';
+        setTimeout(function() { muatRingkasan(sisaPercobaan - 1); }, 2000);
+        return;
+      }
+      tampilkanError('Gagal memuat data: ' + err.message + '. Coba muat ulang halaman.');
+    });
+}
+
+function formatAngka(n) {
+  return Number(n || 0).toLocaleString('id-ID');
+}
+
+function kelasSisaLeads(n) {
+  return n < 0 ? 'num-neg' : (n > 0 ? 'num-pos' : '');
+}
+
+function kelasDtd(n) {
+  if (n > 0) return 'dtd-up';
+  if (n < 0) return 'dtd-down';
+  return 'dtd-flat';
+}
+
+function labelDtd(n) {
+  if (n > 0) return '▲ +' + formatAngka(n);
+  if (n < 0) return '▼ ' + formatAngka(n);
+  return '– 0';
+}
+
+function selMetrik(r) {
+  // 7 sel "Hasil Follow Up" + Sisa Leads/%FU/DtD — dipakai bareng buat
+  // baris Area maupun baris Cabang, field-nya sama persis.
+  var tds = '';
+  tds += '<td class="pill-fu">' + formatAngka(r.jmlFU) + '</td>';
+  tds += '<td class="' + kelasSisaLeads(r.sisaLeads) + '">' + formatAngka(r.sisaLeads) + '</td>';
+  tds += '<td>' + r.persenFU.toFixed(1) + '%</td>';
+  tds += '<td>' + formatAngka(r.shiftingToOptimal) + '</td>';
+  tds += '<td>' + formatAngka(r['Done Konversi to LVM']) + '</td>';
+  tds += '<td>' + formatAngka(r['Tetap pakai EDC & Optimalkan SV']) + '</td>';
+  tds += '<td>' + formatAngka(r['Penawaran']) + '</td>';
+  tds += '<td>' + formatAngka(r['Merchant Menolak']) + '</td>';
+  tds += '<td>' + formatAngka(r['Merchant Tutup']) + '</td>';
+  tds += '<td>' + formatAngka(r['Perlu Kunjungan MTI']) + '</td>';
+  tds += '<td class="' + kelasDtd(r.dtd) + '">' + labelDtd(r.dtd) + '</td>';
+  return tds;
+}
+
+function baris(r, isTotal) {
+  var tds = '<td class="col-area">' + r.area + '</td><td>' + formatAngka(r.jumlahLeads) + '</td>' + selMetrik(r);
+  return '<tr' + (isTotal ? ' class="row-total"' : '') + '>' + tds + '</tr>';
+}
+
+function barisArea(r, idx) {
+  var tds = '<td class="col-area">'
+    + '<span class="expand-icon">▶</span>' + r.area
+    + '<span class="jml-cabang"> (' + r.cabang.length + ' cabang)</span></td>'
+    + '<td>' + formatAngka(r.jumlahLeads) + '</td>' + selMetrik(r);
+  var baris1 = '<tr class="row-area" data-idx="' + idx + '" onclick="toggleArea(' + idx + ')">' + tds + '</tr>';
+  var baris2 = '<tr class="row-cabang-wrap" id="wrapArea' + idx + '">'
+    + '<td colspan="13">' + buatSubtableCabang(r.cabang) + '</td></tr>';
+  return baris1 + baris2;
+}
+
+// Buka wa.me/?text=... TANPA nomor tujuan, jadi user pilih sendiri kontak/
+// grup WA yang mau dikirimin (WhatsApp tidak bisa deep-link langsung ke grup).
+// Kalau winTujuan dikasih (tab yang sudah disiapkan dari awal klik), pakai
+// itu (biar gak ke-block popup blocker) — kalau nggak, baru window.open baru.
+function bukaWhatsApp(teks, winTujuan) {
+  var url = 'https://wa.me/?text=' + encodeURIComponent(teks);
+  if (winTujuan && !winTujuan.closed) { winTujuan.location = url; }
+  else { window.open(url, '_blank'); }
+}
+
+// Cek apakah browser ini dukung Web Share API buat kirim FILE (gambar) +
+// teks sekaligus dalam SATU aksi (share sheet native HP/desktop, user
+// tinggal pilih WhatsApp). Kalau nggak dukung, dipakai cara lama: download
+// gambar + buka wa.me teks doang (attach manual).
+function _bisaShareFile() {
+  try {
+    if (!navigator.share || !navigator.canShare) return false;
+    var dummy = new File([''], 'x.png', { type: 'image/png' });
+    return navigator.canShare({ files: [dummy] });
+  } catch (e) { return false; }
+}
+
+function _unduhBlob(blob, namaFile) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = namaFile;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+}
+
+// WhatsApp motong TEKS jadi cuma "caption gambar" kalau dikirim BARENGAN
+// sama file lewat native share (± 1024 karakter, beda-beda dikit tergantung
+// HP/OS) — beda kalau teksnya dikirim SENDIRIAN sebagai chat biasa (limitnya
+// jauh lebih panjang, laporan sepanjang apapun aman). Laporan Region/Area di
+// sini isinya breakdown 7 kategori + daftar per Area/Cabang, gampang lewat
+// dari itu. Dikasih margin aman di bawah limit asli WhatsApp.
+var BATAS_AMAN_CAPTION_WA = 900;
+
+// Modal "Laporan siap dikirim" — munculin preview gambar + 2 pilihan:
+//   1. Kirim ke WhatsApp (Gambar+Teks) -> native share, TAPI dipicu
+//      LANGSUNG dari klik tombol ini (bukan dari promise chain sebelumnya),
+//      supaya masih dianggap aksi user asli sama browser strict (iOS
+//      Safari). Cuma muncul kalau browsernya emang dukung. TEKSNYA BISA
+//      KEPOTONG kalau laporannya panjang (keterbatasan WhatsApp sendiri,
+//      bukan soal kode) — makanya dikasih peringatan + didahulukan cara
+//      manual kalau teksnya kepanjangan.
+//   2. Download & Buka WA Manual -> fallback yang selalu jalan di mana aja,
+//      DAN teksnya PASTI utuh gak kepotong (dikirim sebagai chat biasa,
+//      bukan caption gambar).
+function _tampilkanModalShare(blob, namaFile, teksWA, judul, waWin) {
+  var previewUrl = URL.createObjectURL(blob);
+  var teksPanjang = teksWA.length > BATAS_AMAN_CAPTION_WA;
+  var bisaShare = _bisaShareFile();
+
+  var tombolNativeHtml = bisaShare
+    ? '<button class="share-modal-btn ' + (teksPanjang ? 'share-modal-btn-secondary' : 'share-modal-btn-primary') + '" id="btnShareNative" type="button">📤 Kirim ke WhatsApp (Gambar+Teks)' + (teksPanjang ? ' ⚠️' : '') + '</button>'
+    : '';
+  var tombolManualHtml = '<button class="share-modal-btn ' + (teksPanjang ? 'share-modal-btn-primary' : 'share-modal-btn-secondary') + '" id="btnShareManual" type="button">⬇️ Download &amp; Buka WA Manual' + (teksPanjang ? ' (disarankan)' : '') + '</button>';
+  // Kalau teksnya panjang, DAHULUKAN tombol manual (teks dijamin utuh) —
+  // native share tetap ada tapi digeser ke bawah + ditandain warning.
+  var urutanTombol = teksPanjang ? (tombolManualHtml + tombolNativeHtml) : (tombolNativeHtml + tombolManualHtml);
+
+  var peringatanHtml = teksPanjang
+    ? '<div class="share-modal-warning">⚠️ Teks laporan ini panjang (' + teksWA.length + ' karakter). Kalau dikirim BARENG gambar (opsi "Gambar+Teks"), WhatsApp bisa <b>motong teksnya</b> jadi caption pendek — ini keterbatasan WhatsApp sendiri. Pakai <b>"Download &amp; Buka WA Manual"</b> supaya teksnya kekirim utuh (gambar tinggal dilampirkan manual).</div>'
+    : '';
+
+  var overlay = document.createElement('div');
+  overlay.className = 'share-modal-overlay';
+  overlay.innerHTML = ''
+    + '<div class="share-modal-card">'
+    + '<img src="' + previewUrl + '" alt="Preview laporan" class="share-modal-preview">'
+    + '<div class="share-modal-title">📋 Laporan siap dikirim</div>'
+    + peringatanHtml
+    + urutanTombol
+    + '<button class="share-modal-close" id="btnShareTutup" type="button">Batal</button>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  var beres = false;
+  function tutupModal() {
+    beres = true;
+    URL.revokeObjectURL(previewUrl);
+    if (overlay.parentNode) document.body.removeChild(overlay);
+  }
+
+  var btnNative = document.getElementById('btnShareNative');
+  if (btnNative) {
+    btnNative.addEventListener('click', function () {
+      // Ini dipanggil PERSIS dari tap tombol -> transient user activation
+      // masih fresh, jadi navigator.share() gak ditolak browser.
+      var file = new File([blob], namaFile, { type: 'image/png' });
+      navigator.share({ files: [file], text: teksWA, title: judul })
+        .then(function () {
+          if (waWin && !waWin.closed) waWin.close();
+          tutupModal();
+        })
+        .catch(function (err) {
+          if (err && err.name === 'AbortError') return; // batal milih target, modal tetep kebuka
+          alert('Share otomatis gagal: ' + err.message + '.\nCoba tombol "Download & Buka WA Manual" di bawah.');
+        });
+    });
+  }
+
+  document.getElementById('btnShareManual').addEventListener('click', function () {
+    _unduhBlob(blob, namaFile);
+    bukaWhatsApp(teksWA, waWin);
+    tutupModal();
+    setTimeout(function () {
+      alert('📥 Gambar tabel sudah otomatis ke-download.\n\nDi jendela WhatsApp yang baru kebuka, klik ikon 📎 lalu lampirkan gambar yang baru ke-download itu sebelum kirim (WhatsApp tidak bisa nerima gambar+teks sekaligus lewat link).');
+    }, 400);
+  });
+
+  document.getElementById('btnShareTutup').addEventListener('click', function () {
+    if (waWin && !waWin.closed) waWin.close();
+    tutupModal();
+  });
+}
+
+// CSS khusus tabel di gambar screenshot: versi LIGHT (putih/terang), beda
+// dari tabel asli di halaman yang gelap. Semua selector di-scope di bawah
+// .shot-light biar gak nyenggol tampilan tabel asli yang lagi kelihatan di
+// layar. Posisi "sticky" juga dipaksa jadi "static" di sini — html2canvas
+// nggak nangkep position:sticky dengan bener (col Area suka acak-acakan
+// posisinya kalau dibiarin sticky pas di-screenshot).
+function _cssScreenshotLight() {
+  return ''
+    + '.shot-light table { background:#ffffff; }'
+    + '.shot-light th, .shot-light td { position:static !important; left:auto !important; top:auto !important; border-bottom:1px solid #e3e7f3 !important; color:#1b2340; }'
+    + '.shot-light thead th { background:#eef1fb !important; color:#1b2340 !important; border-bottom:1px solid #d7def3 !important; }'
+    + '.shot-light thead tr.grp th { background:#e4e9fb !important; color:#41507a !important; }'
+    + '.shot-light thead tr.grp th.grp-fu { background:#d7e0fb !important; color:#2f4aa8 !important; }'
+    + '.shot-light thead tr.grp th.grp-hasil { background:#c7d5fa !important; color:#22398f !important; }'
+    + '.shot-light thead tr.grp th.grp-dtd { background:#dcfce7 !important; color:#15803d !important; }'
+    + '.shot-light td.col-area { background:#f6f8ff !important; color:#0f1730 !important; font-weight:700; text-align:left; }'
+    + '.shot-light tr.row-total td { background:#dbe4fb !important; color:#0f1730 !important; font-weight:800; }'
+    + '.shot-light .num-neg { color:#dc2626 !important; }'
+    + '.shot-light .num-pos { color:#16a34a !important; }'
+    + '.shot-light .pill-fu { color:#1b2340 !important; font-weight:700; }'
+    + '.shot-light .dtd-up { color:#16a34a !important; font-weight:800; }'
+    + '.shot-light .dtd-down { color:#dc2626 !important; font-weight:800; }'
+    + '.shot-light .dtd-flat { color:#6b7280 !important; font-weight:700; }'
+    + '.shot-light table.subtable th { background:#eef1fb !important; color:#41507a !important; }'
+    + '.shot-light table.subtable td { color:#1b2340; border-bottom:1px solid #edf0f9 !important; }'
+    + '.shot-light table.subtable td.col-cabang { background:transparent !important; }'
+    + '.shot-light .kode-cabang { color:#8892b0 !important; }'
+    + '.shot-light .jml-cabang { color:#6b7280 !important; }';
+}
+
+// Simpan hasil getRingkasanArea terakhir yang berhasil dimuat, dipakai buat
+// bikin gambar screenshot tabel (Region/Area) tanpa perlu fetch ulang.
+var LAST_RES = null;
+
+// Susun HTML tabel STANDALONE (headers + isi) khusus buat di-screenshot —
+// SENGAJA dibangun ulang dari data (bukan nyomot tabel yang lagi tampil di
+// halaman), supaya hasilnya predictable & gak kepengaruh baris mana yang
+// lagi di-expand/di-collapse user pas tombol Kirim diklik.
+//   - namaAreaFilter kosong -> tabel semua Area (collapsed) + baris Total.
+//   - namaAreaFilter diisi  -> cuma baris Area itu + rincian per Cabang-nya
+//     (dipaksa "terbuka", biar kelihatan detailnya di gambar).
+function _htmlTabelUntukScreenshot(res, namaAreaFilter) {
+  var theadHtml = document.querySelector('.table-card table thead').outerHTML;
+  var bodyHtml;
+  if (namaAreaFilter) {
+    var area = res.area.filter(function (a) { return a.area === namaAreaFilter; })[0];
+    if (!area) return null;
+    var tds = '<td class="col-area">' + area.area
+      + '<span class="jml-cabang"> (' + area.cabang.length + ' cabang)</span></td>'
+      + '<td>' + formatAngka(area.jumlahLeads) + '</td>' + selMetrik(area);
+    bodyHtml = '<tr>' + tds + '</tr>'
+      + '<tr><td colspan="13" style="padding:0;">' + buatSubtableCabang(area.cabang) + '</td></tr>';
+  } else {
+    bodyHtml = res.area.map(function (r) {
+      var t = '<td class="col-area">' + r.area
+        + '<span class="jml-cabang"> (' + r.cabang.length + ' cabang)</span></td>'
+        + '<td>' + formatAngka(r.jumlahLeads) + '</td>' + selMetrik(r);
+      return '<tr>' + t + '</tr>';
+    }).join('') + baris(res.total, true);
+  }
+  return '<table>' + theadHtml + '<tbody>' + bodyHtml + '</tbody></table>';
+}
+
+// Bikin gambar PNG dari tabel (via html2canvas, versi LIGHT), lalu kirim
+// bareng wording-nya ke WhatsApp.
+//   - Kalau browser dukung Web Share API buat file (kebanyakan HP, & makin
+//     banyak browser desktop) -> gambar+teks langsung kekirim SEKALIGUS
+//     lewat native share sheet, user tinggal pilih WhatsApp. Selesai, gak
+//     perlu attach manual.
+//   - Kalau nggak dukung -> fallback: gambar di-download otomatis + wa.me
+//     teks kebuka di tab yang sudah disiapkan dari awal klik (biar gak
+//     ke-block popup blocker), tinggal attach manual gambarnya sebelum
+//     kirim (ini keterbatasan wa.me sendiri, bukan soal kode).
+function unduhScreenshotDanBuka(namaAreaFilter, judul, namaFile, teksWA, waWin) {
+  if (!LAST_RES) {
+    alert('Data belum termuat, refresh dulu halamannya sebelum kirim laporan.');
+    if (waWin && !waWin.closed) waWin.close();
+    return;
+  }
+  var tabelHtml = _htmlTabelUntukScreenshot(LAST_RES, namaAreaFilter);
+  if (!tabelHtml) {
+    alert('Area tidak ditemukan, gagal bikin gambar. Teks tetap dikirim tanpa gambar.');
+    bukaWhatsApp(teksWA, waWin);
+    return;
+  }
+
+  var wrap = document.createElement('div');
+  wrap.className = 'shot-light';
+  wrap.style.cssText = 'position:fixed;left:-99999px;top:0;display:inline-block;'
+    + 'padding:24px;background:#ffffff;color:#1b2340;'
+    + "font-family:'Plus Jakarta Sans',Arial,sans-serif;";
+  wrap.innerHTML = ''
+    + '<style>' + _cssScreenshotLight() + '</style>'
+    + '<div style="text-align:center;margin-bottom:16px;">'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#5b6b98;">TBRX Report &middot; Region X / Sulawesi &amp; Maluku</div>'
+    + '<div style="font-family:Georgia,serif;font-weight:800;font-size:22px;margin-top:4px;color:#0f1730;">' + judul + '</div>'
+    + '<div style="font-size:12px;color:#6b7280;margin-top:4px;">Diperbarui: ' + (LAST_RES.diperbarui || '-') + '</div>'
+    + '</div>'
+    + tabelHtml;
+  document.body.appendChild(wrap);
+
+  html2canvas(wrap, { backgroundColor: '#ffffff', scale: 2 }).then(function (canvas) {
+    document.body.removeChild(wrap);
+    canvas.toBlob(function (blob) {
+      if (!blob) {
+        alert('Gagal bikin gambar tabel. Teks tetap dikirim tanpa gambar.');
+        bukaWhatsApp(teksWA, waWin);
+        return;
+      }
+      // Gambar + teks udah siap -> tampilin modal, JANGAN auto-trigger
+      // share dari sini (promise chain ini udah "basi" buat browser strict
+      // kayak iOS Safari). Biar valid, share harus dipicu LANGSUNG dari tap
+      // tombol di modal-nya.
+      _tampilkanModalShare(blob, namaFile, teksWA, judul, waWin);
+    }, 'image/png');
+  }).catch(function (err) {
+    if (wrap.parentNode) document.body.removeChild(wrap);
+    alert('Gagal bikin gambar tabel: ' + err.message + '. Teks tetap dikirim tanpa gambar.');
+    bukaWhatsApp(teksWA, waWin);
+  });
+}
+
+function _namaFileTanggal() {
+  var d = new Date();
+  var p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear();
+}
+
+// Siapin tab WhatsApp dari AWAL klik tombol (masih dianggap aksi user
+// langsung sama browser), biar gak ke-block popup blocker pas dipakai
+// belakangan sesudah fetch + proses screenshot yang makan waktu. Kalau
+// browser dukung native share file, tab ini gak jadi dipakai & ditutup lagi.
+function _siapkanTabWa() {
+  if (_bisaShareFile()) return null;
+  var w = window.open('', '_blank');
+  if (w) {
+    try { w.document.write('<title>Menyiapkan laporan…</title><body style="font-family:sans-serif;padding:40px;color:#555">Menyiapkan laporan, tunggu sebentar…</body>'); } catch (e) {}
+  }
+  return w;
+}
+
+function kirimLaporanRegion() {
+  var btn = document.getElementById('btnKirimRegion');
+  btn.disabled = true;
+  var teksAsal = btn.textContent;
+  btn.textContent = 'Menyiapkan...';
+  var waWin = _siapkanTabWa();
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=getWaLaporanRegion'), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.error) { alert('Gagal menyiapkan laporan: ' + res.error); if (waWin && !waWin.closed) waWin.close(); return; }
+      unduhScreenshotDanBuka(null, 'Progress FU Optimalisasi Merchant — Region X', 'Laporan_Region_' + _namaFileTanggal() + '.png', res.teks, waWin);
+    })
+    .catch(function(err) { alert('Gagal menyiapkan laporan: ' + err.message); if (waWin && !waWin.closed) waWin.close(); })
+    .finally(function() { btn.disabled = false; btn.textContent = teksAsal; });
+}
+
+function kirimLaporanArea(ev, namaArea) {
+  ev.stopPropagation(); // biar klik tombol tidak ikut buka/tutup baris Area
+  var btn = ev.currentTarget;
+  btn.disabled = true;
+  var teksAsal = btn.textContent;
+  btn.textContent = '...';
+  var waWin = _siapkanTabWa();
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=getWaLaporanArea&area=' + encodeURIComponent(namaArea)), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.error) { alert('Gagal menyiapkan laporan: ' + res.error); if (waWin && !waWin.closed) waWin.close(); return; }
+      unduhScreenshotDanBuka(namaArea, 'Progress FU Optimalisasi Merchant — ' + namaArea, 'Laporan_' + labelAreaSingkatHtml(namaArea).replace(/\s+/g, '_') + '_' + _namaFileTanggal() + '.png', res.teks, waWin);
+    })
+    .catch(function(err) { alert('Gagal menyiapkan laporan: ' + err.message); if (waWin && !waWin.closed) waWin.close(); })
+    .finally(function() { btn.disabled = false; btn.textContent = teksAsal; });
+}
+
+function buatSubtableCabang(daftar) {
+  var head = '<tr><th>Cabang</th><th>Leads</th><th>Jml FU</th><th>Sisa</th><th>%FU</th>'
+    + '<th>Shifting</th><th>Konversi LVM</th><th>Tetap EDC</th><th>Penawaran</th>'
+    + '<th>Menolak</th><th>Tutup</th><th>MTI</th><th>DtD</th></tr>';
+  var rows = daftar.map(function (c) {
+    var tds = '<td class="col-cabang">' + c.nama + ' <span class="kode-cabang">(' + c.kode + ')</span></td>'
+      + '<td>' + formatAngka(c.jumlahLeads) + '</td>' + selMetrik(c);
+    return '<tr>' + tds + '</tr>';
+  }).join('');
+  return '<table class="subtable"><thead>' + head + '</thead><tbody>' + rows + '</tbody></table>';
+}
+
+function toggleArea(idx) {
+  var wrap = document.getElementById('wrapArea' + idx);
+  var rowArea = document.querySelector('tr.row-area[data-idx="' + idx + '"]');
+  var showing = wrap.classList.toggle('show');
+  rowArea.classList.toggle('expanded', showing);
+}
+
+function tampilkanRingkasan(res) {
+  LAST_RES = res; // dipakai unduhScreenshotDanBuka() buat bikin gambar tabel
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('kontenRingkasan').style.display = 'block';
+  document.getElementById('btnRefresh').disabled = false;
+  document.getElementById('btnRefresh').textContent = '↻ Refresh';
+
+  document.getElementById('updatedInfo').textContent = 'Terakhir diperbarui: ' + (res.diperbarui || '-');
+
+  var html = res.area.map(function(r, idx) { return barisArea(r, idx); }).join('');
+  html += baris(res.total, true);
+  document.getElementById('tbodyArea').innerHTML = html;
+
+  var waHtml = res.area.map(function(r) {
+    return '<button class="btn-wa-area" type="button" onclick="kirimLaporanArea(event, \'' + r.area.replace(/'/g, "\\'") + '\')">📤 Kirim ' + labelAreaSingkatHtml(r.area) + '</button>';
+  }).join('');
+  document.getElementById('waAreaRow').innerHTML = waHtml;
+}
+
+// "Area Manado" -> "Manado" (buat label tombol biar ringkas)
+function labelAreaSingkatHtml(area) {
+  return String(area || '').replace(/^Area\s+/, '');
+}
+
+function tampilkanError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('kontenRingkasan').style.display = 'none';
+  document.getElementById('errorState').style.display = 'block';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('btnRefresh').disabled = false;
+  document.getElementById('btnRefresh').textContent = '↻ Refresh';
+}
+</script>
+</body>
+</html>

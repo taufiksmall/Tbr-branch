@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Monitoring Top 100 Leakage — TBRX Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, sans-serif;
+      background: radial-gradient(1100px 620px at 50% 4%, #202f5e 0%, #131c3f 38%, #0a0f24 70%, #05070f 100%);
+      color: #fff;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
+    .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
+    .topbar-sub { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.65); margin-top: 2px; }
+    .topbar-nav {
+      font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.75);
+      text-decoration: none; padding: 8px 16px; border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px; transition: background .2s, color .2s, border-color .2s;
+      white-space: nowrap;
+    }
+    .topbar-nav:hover { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.3); }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 8px 16px 44px; position: relative; z-index: 1; }
+    .container { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+
+    .page-head { text-align: center; margin: 28px 0 24px; }
+    .breadcrumb { font-size: 12px; font-weight: 600; letter-spacing: .3px; color: rgba(255,255,255,.6); margin-bottom: 10px; text-decoration: none; display: inline-block; }
+    .breadcrumb:hover { color: rgba(255,255,255,.85); }
+    .page-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: 26px; letter-spacing: -.3px; color: #fff; margin-bottom: 8px; }
+    .page-subtitle { font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,.65); }
+
+    .btn-lanjutkan-top {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 13px 20px; margin-top: 16px;
+      border-radius: 12px; background: rgba(68,114,239,.16); border: 1px solid rgba(68,114,239,.5);
+      color: #fff; font-size: 13.5px; font-weight: 800; font-family: inherit; text-decoration: none;
+    }
+
+    .card {
+      position: relative;
+      background: rgba(255,255,255,.035);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 20px;
+      padding: 24px;
+      margin-top: 16px;
+      box-shadow: 0 20px 50px -24px rgba(0,0,0,.6);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 800; color: #fff;
+      margin-bottom: 18px; padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 10px; }
+    .stat-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 6px; text-align: center; }
+    .stat-box.highlight { background: rgba(47,95,224,.12); border-color: rgba(47,95,224,.4); }
+    .stat-number { font-size: 22px; font-weight: 800; line-height: 1; color: #fff; }
+    .stat-box.highlight .stat-number { color: #8faaf5; }
+    .stat-box.sudah .stat-number { color: #5ee08a; }
+    .stat-box.belum .stat-number { color: #fbbf24; }
+    .stat-box.leak .stat-number { color: #f87171; }
+    .stat-label { font-size: 10.5px; color: rgba(255,255,255,.65); font-weight: 600; margin-top: 5px; line-height: 1.3; }
+
+    .toolbar-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 14px; }
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 18px; border-radius: 999px;
+      border: 1px solid rgba(94,224,138,.4); background: rgba(94,224,138,.12);
+      color: #86efac; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
+    .btn-download:hover { background: rgba(94,224,138,.2); }
+    .btn-download:disabled { opacity: .5; cursor: not-allowed; }
+
+    .field-label { display: block; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.7); margin-bottom: 7px; }
+    .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+    .search-input, select.select-input, textarea.select-input {
+      width: 100%; padding: 12px 14px; border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px; font-size: 16px; font-family: inherit; font-weight: 500;
+      color: #fff; background: rgba(255,255,255,.05); outline: none; margin-bottom: 12px;
+    }
+    textarea.select-input { resize: vertical; min-height: 70px; }
+    select.select-input {
+      appearance: none; -webkit-appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-opacity='0.55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat; background-position: right 14px center;
+      padding-right: 38px;
+    }
+    select.select-input option { color: #1f2a44; }
+    select.select-input:disabled { opacity: .45; cursor: not-allowed; }
+    .search-input::placeholder, textarea.select-input::placeholder { color: rgba(255,255,255,.35); }
+    .search-input:focus, select.select-input:focus, textarea.select-input:focus { border-color: rgba(255,255,255,.35); background-color: rgba(255,255,255,.08); }
+
+    .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-tab {
+      display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+      border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.75); font-size: 12.5px; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: background .2s, border-color .2s;
+    }
+    .filter-tab.active { background: rgba(47,95,224,.22); border-color: rgba(47,95,224,.5); color: #fff; }
+
+    .list-item {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px; padding: 13px 16px; margin-bottom: 10px;
+      cursor: pointer; transition: background .2s, border-color .2s;
+    }
+    .list-item:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+    .list-item:focus-visible { outline: none; border-color: rgba(68,114,239,.7); box-shadow: 0 0 0 3px rgba(47,95,224,.3); }
+    .list-item:last-child { margin-bottom: 0; }
+    .list-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .list-item-nama { font-size: 14.5px; font-weight: 700; color: #fff; }
+    .list-item-info { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 4px; }
+    .list-item-fin { font-size: 12px; color: rgba(255,255,255,.85); margin-top: 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .list-item-fin b { color: #fff; font-weight: 700; }
+    .list-item-tgl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 6px; }
+    .list-item-badges { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+    .badge { font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+    .badge-sudah { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+    .badge-belum { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
+    .badge-ket { background: rgba(68,114,239,.16); color: #8faaf5; border: 1px solid rgba(68,114,239,.4); font-size: 10.5px; }
+
+    .empty { text-align: center; padding: 24px; color: rgba(255,255,255,.5); font-size: 13.5px; }
+
+    #loadingState { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.7); position: relative; z-index: 1; }
+    .spinner {
+      width: 44px; height: 44px; border: 4px solid rgba(255,255,255,.15);
+      border-top-color: #4472ef; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+
+    .footer { text-align: center; padding: 40px 16px 4px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,.55); }
+
+    /* Modal follow up */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(4,6,14,.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-panel {
+      width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto;
+      background: #101833; border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px; padding: 24px; box-shadow: 0 30px 70px -20px rgba(0,0,0,.7);
+    }
+    .modal-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 19px; color: #fff; margin-bottom: 4px; }
+    .modal-sub { font-size: 12.5px; color: rgba(255,255,255,.65); margin-bottom: 4px; }
+    .modal-error { font-size: 12.5px; color: #fca5a5; margin-top: 10px; display: none; }
+    .modal-error.show { display: block; }
+    .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 22px; }
+    .modal-cancel { font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,.75); background: none; border: none; cursor: pointer; font-family: inherit; }
+    .modal-cancel:hover { color: #fff; }
+    .modal-save {
+      padding: 11px 22px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, #4472ef, #2b4fd6);
+      color: #fff; font-size: 13.5px; font-weight: 700; font-family: inherit;
+      cursor: pointer; box-shadow: 0 12px 26px -12px rgba(43,79,214,.7);
+    }
+    .modal-save:disabled { opacity: .6; cursor: not-allowed; }
+
+    .info-box {
+      margin: 16px 0; padding: 14px; background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 12px;
+    }
+    .info-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; }
+    .info-row + .info-row { border-top: 1px solid rgba(255,255,255,.06); }
+    .info-row span:first-child { color: rgba(255,255,255,.55); }
+    .info-row span:last-child { color: #fff; font-weight: 700; text-align: right; }
+    .info-row.total span:last-child { color: #fca5a5; }
+
+    .fab-lanjutkan {
+      position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+      transform: translateX(-50%); z-index: 400;
+      display: flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px;
+      background: linear-gradient(135deg, #4472ef, #2b4fd6); color: #fff;
+      font-size: 13.5px; font-weight: 800; font-family: inherit; text-decoration: none;
+      box-shadow: 0 14px 34px -10px rgba(43,79,214,.8); border: 1px solid rgba(255,255,255,.25);
+      white-space: nowrap;
+    }
+    .fab-lanjutkan:active { transform: translateX(-50%) scale(0.97); }
+
+    #toast {
+      position: fixed; bottom: calc(88px + env(safe-area-inset-bottom)); left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(10,14,30,.92); border: 1px solid rgba(255,255,255,.14); color: white;
+      padding: 11px 22px; border-radius: 24px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35); transition: transform 0.3s; z-index: 1000; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <img src="assets/tbr-logo-white.png" alt="TBRX" class="topbar-mark">
+    <div>
+      <div class="topbar-title">TBRX Report</div>
+      <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
+    </div>
+  </div>
+  <div class="topbar-nav-group">
+    <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
+    <a class="topbar-nav" href="index.html">Lanjutkan Laporan →</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="page-head">
+    <a class="breadcrumb" href="index.html">← Lanjutkan Laporan</a>
+    <h1 class="page-title">Monitoring Top 100 Leakage</h1>
+    <div class="page-subtitle" id="headerSubtitle">Memuat data...</div>
+  </div>
+
+  <a href="index.html" class="btn-lanjutkan-top">↩ Lanjutkan Laporan di Form</a>
+
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div id="loadingMsg">Memuat data leakage...</div>
+  </div>
+
+  <div id="kontenLeakage" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">Ringkasan</div>
+      <div class="stats-row">
+        <div class="stat-box highlight">
+          <div class="stat-number" id="statTotal">0</div>
+          <div class="stat-label">Total Merchant</div>
+        </div>
+        <div class="stat-box sudah">
+          <div class="stat-number" id="statSudah">0</div>
+          <div class="stat-label">Sudah Follow Up</div>
+        </div>
+        <div class="stat-box belum">
+          <div class="stat-number" id="statBelum">0</div>
+          <div class="stat-label">Belum Follow Up</div>
+        </div>
+        <div class="stat-box leak">
+          <div class="stat-number" id="statTotalLeakage">0</div>
+          <div class="stat-label">Total Leakage (Rp Jt)</div>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn-download" id="btnDownload" type="button">⬇ Download Excel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Filter</div>
+      <div class="filter-row">
+        <div>
+          <label class="field-label">Area</label>
+          <select id="selectArea" class="select-input">
+            <option value="">Semua Area</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">Status</label>
+          <select id="selectStatusFU" class="select-input">
+            <option value="">Semua</option>
+            <option value="sudah">Sudah Follow Up</option>
+            <option value="belum">Belum Follow Up</option>
+          </select>
+        </div>
+      </div>
+      <input type="text" id="searchBox" class="search-input" placeholder="Cari nama merchant...">
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daftar Merchant</div>
+      <p style="font-size:12px;color:rgba(255,255,255,.55);margin:-10px 0 14px;">Klik salah satu merchant untuk isi/update hasil follow up.</p>
+      <div id="listLeakage"></div>
+    </div>
+
+  </div>
+
+  <div id="errorState" style="display:none;">
+    <div class="page-head" style="margin-top:60px;">
+      <div style="font-size:44px;margin-bottom:16px;">⚠</div>
+      <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin-bottom:8px;color:#fff;">Gagal Memuat Data</h2>
+      <p style="color:rgba(255,255,255,.65);font-size:13.5px;" id="errorMsg">Terjadi kesalahan saat mengambil data leakage.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    Monitoring Top 100 Leakage · TBRX Team<br>
+    <span>Copyright &copy; 2026 TBRX Team</span>
+  </div>
+</div>
+
+<a href="index.html" class="fab-lanjutkan">↩ Lanjutkan Laporan</a>
+
+<!-- Modal follow up -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-panel">
+    <div class="modal-title" id="modalMerchant">-</div>
+    <div class="modal-sub" id="modalArea">-</div>
+    <div class="modal-sub" id="modalRek" style="opacity:.6;"></div>
+
+    <div class="info-box" id="infoBox"></div>
+
+    <div id="modalError" class="modal-error">Gagal menyimpan. Coba lagi.</div>
+
+    <div id="modalFormGroup">
+      <label class="field-label">Keterangan Leakage</label>
+      <select id="fKeteranganLeakage" class="select-input">
+        <option value="">-- Belum dipilih --</option>
+        <option value="1. Rekening Operasional di Bank lain">1. Rekening Operasional di Bank lain</option>
+        <option value="2. Rekening Pihak Ketiga di Bank lain (>50%)">2. Rekening Pihak Ketiga di Bank lain (&gt;50%)</option>
+        <option value="3. Memiliki Fasilitas Pinjaman di Bank lain">3. Memiliki Fasilitas Pinjaman di Bank lain</option>
+        <option value="4. Mendapatkan Special Rate Funding di Bank lain">4. Mendapatkan Special Rate Funding di Bank lain</option>
+        <option value="6. Lainnya">6. Lainnya</option>
+      </select>
+
+      <label class="field-label">Potensi Winback (Rp Jt)</label>
+      <input type="number" id="fPotensiWinback" class="search-input" placeholder="0" min="0">
+
+      <label class="field-label">Penawaran Prima/Prima Xtra (Y/N)</label>
+      <select id="fPenawaranPrima" class="select-input">
+        <option value="">-- Belum dipilih --</option>
+        <option value="Ya">Ya</option>
+        <option value="Tidak">Tidak</option>
+      </select>
+
+      <label class="field-label">Penawaran Lainnya</label>
+      <input type="text" id="fPenawaranLainnya" class="search-input" placeholder="Penawaran lain yang diberikan">
+
+      <label class="field-label">Keterangan Follow Up</label>
+      <textarea id="fKeteranganFollowUp" class="select-input" placeholder="Catatan hasil follow up ke merchant"></textarea>
+
+      <label class="field-label">Pipeline</label>
+      <select id="fSumberPipeline" class="select-input">
+        <option value="">-- Belum dipilih --</option>
+        <option value="Bottom Up">Bottom Up</option>
+        <option value="Top Down">Top Down</option>
+      </select>
+
+      <label class="field-label">Ket Konfirmasi</label>
+      <select id="fKetKonfirmasi" class="select-input">
+        <option value="">-- Belum dipilih --</option>
+        <option value="Done">Done</option>
+        <option value="Belum">Belum</option>
+      </select>
+
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancel" type="button">Batal</button>
+        <button class="modal-save" id="modalSave" type="button">Simpan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Berhasil disimpan!</div>
+
+<script>
+// ================================================================
+// ⚙️ KONFIGURASI — GANTI URL INI DENGAN URL APPS SCRIPT ANDA
+// ================================================================
+var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
+// ================================================================
+
+var DATA_ALL = [];
+var KODE_AREA_FILTER = '';
+var STATUS_FU_FILTER = '';
+var MODAL_TARGET = null; // { area, merchant } sedang diedit
+
+// Kolom follow up dianggap "kosong" kalau nilainya salah satu ini —
+// dipakai buat nentuin badge Sudah/Belum Follow Up.
+var FIELD_FOLLOWUP = ['keteranganLeakage', 'potensiWinback', 'penawaranPrima', 'penawaranLainnya', 'keteranganFollowUp', 'sumberPipeline', 'ketKonfirmasi'];
+function sudahFollowUp(m) {
+  return FIELD_FOLLOWUP.some(function(k) {
+    var v = m[k];
+    return v !== undefined && v !== null && String(v).trim() !== '' && v !== '-';
+  });
+}
+
+function formatAngka(n) {
+  return Number(n || 0).toLocaleString('id-ID');
+}
+function formatRasio(n) {
+  return (Math.round(Number(n || 0) * 100) / 100).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s) {
+  return escHtml(s).replace(/"/g,'&quot;');
+}
+
+window.onload = function() {
+  var params = new URLSearchParams(window.location.search);
+  KODE_AREA_FILTER = params.get('area') || '';
+
+  var url = APPS_SCRIPT_URL + '?action=getLeakageAll' +
+    (KODE_AREA_FILTER ? '&area=' + encodeURIComponent(KODE_AREA_FILTER) : '');
+
+  cekMaintenanceLaluMuat(url);
+
+  document.getElementById('modalCancel').addEventListener('click', tutupModal);
+  document.getElementById('modalOverlay').addEventListener('click', function(ev) {
+    if (ev.target === this) tutupModal();
+  });
+  document.getElementById('modalSave').addEventListener('click', simpanFollowUp);
+  document.getElementById('btnDownload').addEventListener('click', downloadExcel);
+};
+
+// Sama seperti pipeline.html — cek dulu status maintenance (request ringan)
+// sebelum muat data leakage yang lebih berat.
+function cekMaintenanceLaluMuat(url) {
+  fetch(APPS_SCRIPT_URL + '?action=cekMaintenance')
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      muatDataLeakage(url, 3);
+    })
+    .catch(function() { muatDataLeakage(url, 3); });
+}
+
+// Anti-cache + retry otomatis, sama seperti muatDataPipeline() di
+// pipeline.html — biar tahan sesekali Apps Script sibuk/throttled, dan
+// tidak kena cache browser waktu balik lagi ke halaman ini.
+function muatDataLeakage(url, sisaPercobaan) {
+  var urlAntiCache = url + (url.indexOf('?') === -1 ? '?' : '&') + '_ts=' + Date.now();
+  fetch(urlAntiCache, { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res;
+      try { res = JSON.parse(teks); }
+      catch (e) { throw new Error('respons bukan JSON (server sedang sibuk)'); }
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      if (res.error) { tampilkanError(res.error); return; }
+      DATA_ALL = res.data || [];
+      tampilkanData();
+    })
+    .catch(function(err) {
+      if (sisaPercobaan > 1) {
+        var msg = document.getElementById('loadingMsg');
+        if (msg) msg.textContent = 'Server sedang sibuk, mencoba lagi...';
+        setTimeout(function() { muatDataLeakage(url, sisaPercobaan - 1); }, 2000);
+        return;
+      }
+      tampilkanError('Gagal memuat data setelah beberapa percobaan: ' + err.message + '. Coba muat ulang halaman.');
+    });
+}
+
+function tampilkanData() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('kontenLeakage').style.display = 'block';
+
+  var subtitle = document.getElementById('headerSubtitle');
+  if (KODE_AREA_FILTER && DATA_ALL.length) {
+    subtitle.textContent = DATA_ALL[0].labelArea + ' · Follow Up Merchant Leakage';
+  } else {
+    subtitle.textContent = 'Follow Up Merchant Leakage per Area';
+  }
+
+  isiFilterArea();
+  render();
+
+  document.getElementById('searchBox').addEventListener('input', render);
+  document.getElementById('selectStatusFU').addEventListener('change', function() {
+    STATUS_FU_FILTER = this.value;
+    render();
+  });
+  document.getElementById('selectArea').addEventListener('change', function() {
+    KODE_AREA_FILTER = this.value;
+    render();
+  });
+  document.getElementById('listLeakage').addEventListener('click', function(ev) {
+    var item = ev.target.closest('.list-item');
+    if (!item) return;
+    bukaModal(item.dataset.area, item.dataset.merchant);
+  });
+}
+
+function isiFilterArea() {
+  var areaSel = document.getElementById('selectArea');
+  var map = {};
+  DATA_ALL.forEach(function(m) { map[m.kodeArea] = m.labelArea; });
+  var kodeList = Object.keys(map).sort();
+  areaSel.innerHTML = '<option value="">Semua Area</option>' +
+    kodeList.map(function(k) { return '<option value="' + escAttr(k) + '">' + escHtml(map[k]) + '</option>'; }).join('');
+  if (KODE_AREA_FILTER) areaSel.value = KODE_AREA_FILTER;
+}
+
+function render() {
+  var keyword = (document.getElementById('searchBox').value || '').toLowerCase().trim();
+
+  var filtered = DATA_ALL.filter(function(m) {
+    if (KODE_AREA_FILTER && m.kodeArea !== KODE_AREA_FILTER) return false;
+    var sudah = sudahFollowUp(m);
+    if (STATUS_FU_FILTER === 'sudah' && !sudah) return false;
+    if (STATUS_FU_FILTER === 'belum' && sudah) return false;
+    if (!keyword) return true;
+    return (m.merchant + ' ' + m.labelArea).toLowerCase().indexOf(keyword) !== -1;
+  });
+
+  // Ringkasan dihitung dari cakupan Area yang dipilih (bukan hasil
+  // pencarian/status), supaya angkanya tetap relevan dengan scope yang dilihat.
+  var cakupan = DATA_ALL.filter(function(m) { return !KODE_AREA_FILTER || m.kodeArea === KODE_AREA_FILTER; });
+  var sudah = 0, totalLeakage = 0;
+  cakupan.forEach(function(m) {
+    if (sudahFollowUp(m)) sudah++;
+    totalLeakage += m.totalLeakage;
+  });
+  document.getElementById('statTotal').textContent = formatAngka(cakupan.length);
+  document.getElementById('statSudah').textContent = formatAngka(sudah);
+  document.getElementById('statBelum').textContent = formatAngka(cakupan.length - sudah);
+  document.getElementById('statTotalLeakage').textContent = formatAngka(Math.round(totalLeakage));
+
+  var wrap = document.getElementById('listLeakage');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="empty">Tidak ada merchant yang cocok.</div>';
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(function(m) {
+    var sudahFU = sudahFollowUp(m);
+    var badgeStatus = sudahFU
+      ? '<span class="badge badge-sudah">Sudah FU</span>'
+      : '<span class="badge badge-belum">Belum FU</span>';
+    var badgeKet = (m.keteranganLeakage && m.keteranganLeakage !== '-')
+      ? '<span class="badge badge-ket">' + escHtml(m.keteranganLeakage) + '</span>' : '';
+    return '' +
+      '<div class="list-item" tabindex="0" data-area="' + escAttr(m.area) + '" data-merchant="' + escAttr(m.merchant) + '">' +
+        '<div class="list-item-top">' +
+          '<span class="list-item-nama">' + escHtml(m.merchant) + '</span>' +
+          '<div class="list-item-badges">' + badgeStatus + '</div>' +
+        '</div>' +
+        '<div class="list-item-info">' + escHtml(m.labelArea) + ' · Rek ' + escHtml(m.noRekSet) + '</div>' +
+        '<div class="list-item-fin">' +
+          '<span>SV: <b>Rp ' + formatAngka(m.salesVolume) + ' Jt</b></span>' +
+          '<span>Leakage: <b>Rp ' + formatAngka(m.totalLeakage) + ' Jt</b></span>' +
+          '<span>Ratio: <b>' + formatRasio(m.leakageRatio) + '</b></span>' +
+        '</div>' +
+        (badgeKet ? '<div style="margin-top:8px;">' + badgeKet + '</div>' : '') +
+        '<div class="list-item-tgl">Update terakhir: ' + escHtml(m.tanggalUpdate) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function cariMerchant(area, merchant) {
+  return DATA_ALL.filter(function(m) { return m.area === area && m.merchant === merchant; })[0] || null;
+}
+
+function bukaModal(area, merchant) {
+  var m = cariMerchant(area, merchant);
+  if (!m) return;
+  MODAL_TARGET = { area: area, merchant: merchant };
+
+  document.getElementById('modalMerchant').textContent = m.merchant;
+  document.getElementById('modalArea').textContent = m.labelArea;
+  document.getElementById('modalRek').textContent = 'No CIF ' + m.noCif + ' · No Rek ' + m.noRekSet;
+
+  document.getElementById('infoBox').innerHTML = '' +
+    '<div class="info-row"><span>Sales Volume</span><span>Rp ' + formatAngka(m.salesVolume) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Incoming Rek Settlement</span><span>Rp ' + formatAngka(m.incomingRek) + ' Jt</span></div>' +
+    '<div class="info-row"><span>SV/Incoming Ratio</span><span>' + formatRasio(m.svIncomingRatio) + '</span></div>' +
+    '<div class="info-row"><span>Leakage ke Rek Sendiri</span><span>Rp ' + formatAngka(m.leakageRekSendiri) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Leakage ke Rek Pihak Ketiga</span><span>Rp ' + formatAngka(m.leakageRekPihak3) + ' Jt</span></div>' +
+    '<div class="info-row total"><span>Total Leakage</span><span>Rp ' + formatAngka(m.totalLeakage) + ' Jt</span></div>' +
+    '<div class="info-row"><span>Leakage Ratio</span><span>' + formatRasio(m.leakageRatio) + '</span></div>';
+
+  document.getElementById('fKeteranganLeakage').value = m.keteranganLeakage !== '-' ? m.keteranganLeakage : '';
+  document.getElementById('fPotensiWinback').value = m.potensiWinback !== '-' ? m.potensiWinback : '';
+  document.getElementById('fPenawaranPrima').value = m.penawaranPrima !== '-' ? m.penawaranPrima : '';
+  document.getElementById('fPenawaranLainnya').value = m.penawaranLainnya !== '-' ? m.penawaranLainnya : '';
+  document.getElementById('fKeteranganFollowUp').value = m.keteranganFollowUp !== '-' ? m.keteranganFollowUp : '';
+  document.getElementById('fSumberPipeline').value = m.sumberPipeline !== '-' ? m.sumberPipeline : '';
+  document.getElementById('fKetKonfirmasi').value = m.ketKonfirmasi !== '-' ? m.ketKonfirmasi : '';
+
+  document.getElementById('modalError').classList.remove('show');
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function tutupModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  MODAL_TARGET = null;
+}
+
+function simpanFollowUp() {
+  if (!MODAL_TARGET) return;
+  var btn = document.getElementById('modalSave');
+  var errBox = document.getElementById('modalError');
+  errBox.classList.remove('show');
+
+  var nilai = {
+    keteranganLeakage : document.getElementById('fKeteranganLeakage').value,
+    potensiWinback    : document.getElementById('fPotensiWinback').value.trim(),
+    penawaranPrima    : document.getElementById('fPenawaranPrima').value,
+    penawaranLainnya  : document.getElementById('fPenawaranLainnya').value.trim(),
+    keteranganFollowUp: document.getElementById('fKeteranganFollowUp').value.trim(),
+    sumberPipeline    : document.getElementById('fSumberPipeline').value,
+    ketKonfirmasi     : document.getElementById('fKetKonfirmasi').value
+  };
+
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+
+  var params = new URLSearchParams({
+    action  : 'updateLeakageFollowUp',
+    area    : MODAL_TARGET.area,
+    merchant: MODAL_TARGET.merchant
+  });
+  Object.keys(nilai).forEach(function(k) { params.append(k, nilai[k]); });
+
+  fetch(APPS_SCRIPT_URL + '?' + params.toString())
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+      if (!res.success) {
+        errBox.textContent = res.error || 'Gagal menyimpan. Coba lagi.';
+        errBox.classList.add('show');
+        return;
+      }
+      var m = cariMerchant(MODAL_TARGET.area, MODAL_TARGET.merchant);
+      if (m) {
+        Object.keys(nilai).forEach(function(k) { m[k] = nilai[k] || '-'; });
+        m.tanggalUpdate = 'Baru saja';
+      }
+      tutupModal();
+      render();
+      toast('Berhasil disimpan!');
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+      errBox.textContent = 'Gagal menyimpan: ' + err.message;
+      errBox.classList.add('show');
+    });
+}
+
+function downloadExcel() {
+  var btn = document.getElementById('btnDownload');
+  btn.disabled = true;
+  var teksAsal = btn.textContent;
+  btn.textContent = '⏳ Menyiapkan...';
+  fetch(APPS_SCRIPT_URL + '?action=exportLeakageExcel')
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error || !res.url) { alert('Gagal menyiapkan file: ' + (res.error || 'URL tidak ditemukan')); return; }
+      window.open(res.url, '_blank');
+    })
+    .catch(function(err) { alert('Gagal menyiapkan file: ' + err.message); })
+    .finally(function() { btn.disabled = false; btn.textContent = teksAsal; });
+}
+
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2500);
+}
+
+function tampilkanError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorState').style.display = 'block';
+}
+</script>
+</body>
+</html>

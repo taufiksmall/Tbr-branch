@@ -20,6 +20,7 @@
 
     /* Top brand bar */
     .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
     .topbar-brand { display: flex; align-items: center; gap: 10px; }
     .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
     .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
@@ -168,35 +169,6 @@
 
     .empty { text-align: center; padding: 24px; color: rgba(255,255,255,.5); font-size: 13.5px; }
 
-    .area-row {
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 14px;
-      margin-bottom: 8px;
-      background: rgba(255,255,255,.03);
-      overflow: hidden;
-    }
-    .area-row:last-child { margin-bottom: 0; }
-    .area-row.is-total { background: rgba(47,95,224,.08); border-color: rgba(47,95,224,.35); }
-    .area-row-top {
-      display: flex; align-items: center; gap: 10px;
-      padding: 13px 16px;
-      cursor: pointer;
-    }
-    .area-row-top:hover { background: rgba(255,255,255,.04); }
-    .area-row-top:focus-visible { outline: none; box-shadow: inset 0 0 0 2px rgba(68,114,239,.7); }
-    .area-row-name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .area-row.is-total .area-row-name { font-weight: 800; }
-    .area-row-total { font-size: 13.5px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .area-row-percent { font-size: 12.5px; font-weight: 700; color: #8faaf5; min-width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
-    .area-row-chevron { flex-shrink: 0; color: rgba(255,255,255,.5); transition: transform .2s; }
-    .area-row.open .area-row-chevron { transform: rotate(180deg); }
-    .area-row-detail {
-      display: none;
-      flex-wrap: wrap; gap: 6px;
-      padding: 0 16px 14px;
-    }
-    .area-row.open .area-row-detail { display: flex; }
-
     #loadingState { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.7); position: relative; z-index: 1; }
     .spinner {
       width: 44px; height: 44px;
@@ -339,7 +311,10 @@
       <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
     </div>
   </div>
-  <a class="topbar-nav" href="index.html">Lanjutkan Laporan →</a>
+  <div class="topbar-nav-group">
+    <a class="topbar-nav" href="monitoring-area.html">Monitoring</a>
+    <a class="topbar-nav" href="index.html">Lanjutkan Laporan →</a>
+  </div>
 </div>
 
 <div class="container">
@@ -395,12 +370,6 @@
           <div class="stat-label">Tetap pakai EDC & Optimalkan SV</div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Progress per Area</div>
-      <p style="font-size:12px;color:rgba(255,255,255,.6);margin:-10px 0 14px;">Tekan salah satu area untuk lihat rincian status.</p>
-      <div id="areaProgressList"></div>
     </div>
 
     <div class="card">
@@ -465,6 +434,7 @@
     <div class="modal-title" id="modalMerchant">-</div>
     <div class="modal-sub" id="modalCabang">-</div>
     <div class="modal-sub" id="modalAlamat" style="margin-top:-14px;"></div>
+    <div class="modal-sub" id="modalMidMerchant" style="margin-top:-14px;font-size:11px;opacity:.6;"></div>
     <div id="modalTaggingWrap" style="display:none;margin-top:8px;"><span class="badge-tag" id="modalTagging"></span></div>
 
     <div id="modalFormGroup">
@@ -670,15 +640,39 @@ window.onload = function() {
   var url = APPS_SCRIPT_URL + '?action=getPipelineAll' +
     (KODE_FILTER ? '&kodeCabang=' + encodeURIComponent(KODE_FILTER) : '');
 
-  muatDataPipeline(url, 3);
+  cekMaintenanceLaluMuat(url);
 };
+
+// Cek dulu status maintenance (request ringan, gak baca sheet Pipeline yang
+// >4000 baris) sebelum muatDataPipeline yang berat. Kalau gagal ngecek
+// (network hiccup dll), tetep lanjut normal — jangan sampai user ke-block
+// gara-gara cekMaintenance doang yang gagal.
+function cekMaintenanceLaluMuat(url) {
+  fetch(APPS_SCRIPT_URL + '?action=cekMaintenance')
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      muatDataPipeline(url, 3);
+    })
+    .catch(function() { muatDataPipeline(url, 3); });
+}
 
 // Sheet "Pipeline EDC to LVM" berisi ribuan baris, jadi setiap request
 // butuh beberapa detik untuk di-scan Apps Script — sesekali Google
 // membalas dengan halaman HTML (bukan JSON) kalau lagi sibuk/throttled.
 // Coba ulang otomatis beberapa kali sebelum benar-benar menampilkan error.
+//
+// Catatan penting: pipeline.html biasanya dibuka lewat link yang SAMA
+// persis tiap kali (mis. pipeline.html?kode=17008), jadi URL fetch ke
+// Apps Script juga selalu sama persis. Browser bisa menyimpan respons GET
+// itu di HTTP cache-nya — akibatnya setelah user isi follow up lalu
+// refresh halaman, yang muncul adalah data LAMA dari cache, bukan data
+// terbaru dari sheet (walaupun sheet-nya sendiri sudah benar terupdate).
+// Makanya selalu tambah parameter anti-cache (_ts) & matikan fetch cache.
 function muatDataPipeline(url, sisaPercobaan) {
-  fetch(url)
+  var urlAntiCache = url + (url.indexOf('?') === -1 ? '?' : '&') + '_ts=' + Date.now();
+  fetch(urlAntiCache, { cache: 'no-store' })
     .then(function(r) { return r.text(); })
     .then(function(teks) {
       var res;
@@ -687,6 +681,7 @@ function muatDataPipeline(url, sisaPercobaan) {
       } catch (e) {
         throw new Error('respons bukan JSON (server sedang sibuk)');
       }
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
       if (res.error) { tampilkanError(res.error); return; }
       DATA_ALL = res.data || [];
       tampilkanData();
@@ -716,7 +711,6 @@ function tampilkanData() {
   }
 
   isiFilterAreaCabang();
-  renderTabelArea();
   render();
 
   document.getElementById('searchBox').addEventListener('input', render);
@@ -740,29 +734,17 @@ function tampilkanData() {
     render();
   });
 
-  document.getElementById('areaProgressList').addEventListener('click', function(ev) {
-    var top = ev.target.closest('.area-row-top');
-    if (top) toggleAreaRow(top);
-  });
-  document.getElementById('areaProgressList').addEventListener('keydown', function(ev) {
-    if (ev.key !== 'Enter' && ev.key !== ' ') return;
-    var top = ev.target.closest('.area-row-top');
-    if (!top) return;
-    ev.preventDefault();
-    toggleAreaRow(top);
-  });
-
   document.getElementById('listPipeline').addEventListener('click', function(ev) {
     var item = ev.target.closest('.list-item');
     if (!item) return;
-    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.mid, item.dataset.area, item.dataset.alasan, item.dataset.tagging);
+    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.mid, item.dataset.area, item.dataset.alasan, item.dataset.tagging, item.dataset.midmerchant);
   });
   document.getElementById('listPipeline').addEventListener('keydown', function(ev) {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var item = ev.target.closest('.list-item');
     if (!item) return;
     ev.preventDefault();
-    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.mid, item.dataset.area, item.dataset.alasan, item.dataset.tagging);
+    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.mid, item.dataset.area, item.dataset.alasan, item.dataset.tagging, item.dataset.midmerchant);
   });
 
   document.getElementById('modalStatus').addEventListener('change', toggleFieldsByStatus);
@@ -817,77 +799,6 @@ function isiSelectCabang() {
     kodeList.map(function(k) { return '<option value="' + k + '">' + k + ' - ' + map[k] + '</option>'; }).join('');
 
   if (KODE_FILTER) cabangSel.value = KODE_FILTER;
-}
-
-// ── Progress per Area (selalu semua area, tidak terpengaruh filter) ──
-// Setiap area ditampilkan sebagai baris ringkas (Area, Total, %Progress FU)
-// yang bisa ditekan untuk expand lihat rincian status — supaya nggak perlu
-// scroll ke samping seperti tabel biasa di layar mobile.
-function renderTabelArea() {
-  // Urutan sama dengan dropdown Area (urutan kode area menaik, lihat
-  // isiFilterAreaCabang), bukan alfabetis.
-  var areas = Object.keys(DATA_CABANG);
-  var totalAgg = { total: 0, done: 0, penawaran: 0, menolak: 0, tutup: 0, mti: 0, tetapedc: 0 };
-
-  var barisArea = areas.map(function(area) {
-    var c = hitungStatusArea(area);
-    totalAgg.total     += c.total;
-    totalAgg.done      += c.done;
-    totalAgg.penawaran += c.penawaran;
-    totalAgg.menolak   += c.menolak;
-    totalAgg.tutup     += c.tutup;
-    totalAgg.mti       += c.mti;
-    totalAgg.tetapedc  += c.tetapedc;
-    return barisAreaProgress(area, c);
-  }).join('');
-
-  var totalRow = barisAreaProgress('Total', totalAgg, true);
-
-  document.getElementById('areaProgressList').innerHTML = barisArea + totalRow;
-}
-
-function toggleAreaRow(top) {
-  var row = top.closest('.area-row');
-  var isOpen = row.classList.toggle('open');
-  top.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-}
-
-function hitungStatusArea(area) {
-  var c = { total: 0, done: 0, penawaran: 0, menolak: 0, tutup: 0, mti: 0, tetapedc: 0 };
-  DATA_ALL.forEach(function(m) {
-    if (areaResmi(m) !== area) return;
-    c.total++;
-    if (m.status === 'Done Konversi to LVM') c.done++;
-    else if (m.status === 'Penawaran') c.penawaran++;
-    else if (m.status === 'Merchant Menolak') c.menolak++;
-    else if (m.status === 'Merchant Tutup') c.tutup++;
-    else if (m.status === 'Perlu Kunjungan MTI') c.mti++;
-    else if (m.status === 'Tetap pakai EDC & Optimalkan SV') c.tetapedc++;
-  });
-  return c;
-}
-
-function barisAreaProgress(label, c, isTotal) {
-  var target = c.total - c.done - c.penawaran - c.menolak - c.tutup - c.mti - c.tetapedc;
-  var persenFU = c.total ? Math.round(((c.total - target) / c.total) * 1000) / 10 : 0;
-  var ariaLabel = label + ', total ' + c.total + ' merchant, progress follow up ' + persenFU + ' persen. Tekan untuk lihat rincian status.';
-  return '' +
-    '<div class="area-row' + (isTotal ? ' is-total' : '') + '">' +
-      '<div class="area-row-top" tabindex="0" role="button" aria-expanded="false" aria-label="' + escAttr(ariaLabel) + '">' +
-        '<span class="area-row-name">' + escHtml(label) + '</span>' +
-        '<span class="area-row-total">' + formatAngka(c.total) + '</span>' +
-        '<span class="area-row-percent">' + persenFU + '%</span>' +
-        '<svg class="area-row-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
-      '</div>' +
-      '<div class="area-row-detail">' +
-        '<span class="badge badge-done">Done ' + formatAngka(c.done) + '</span>' +
-        '<span class="badge badge-penawaran">Penawaran ' + formatAngka(c.penawaran) + '</span>' +
-        '<span class="badge badge-menolak">Menolak ' + formatAngka(c.menolak) + '</span>' +
-        '<span class="badge badge-tutup">Tutup ' + formatAngka(c.tutup) + '</span>' +
-        '<span class="badge badge-mti">Perlu Kunjungan MTI ' + formatAngka(c.mti) + '</span>' +
-        '<span class="badge badge-tetapedc">Tetap pakai EDC & Optimalkan SV ' + formatAngka(c.tetapedc) + '</span>' +
-      '</div>' +
-    '</div>';
 }
 
 function badgeClassFor(status) {
@@ -961,7 +872,12 @@ function render() {
     var taggingBadge = tagging ? '<span class="badge-tag ' + tagClassFor(tagging) + '">' + escHtml(tagging) + '</span>' : '';
     var ariaLabel = m.namaMerchant + ', status ' + m.status + '. Tekan untuk update progress.';
     return '' +
-      '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-kode="' + escAttr(m.kodeCabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '" data-status="' + escAttr(m.status) + '" data-nama-cabang="' + escAttr(namaCabang) + '" data-area="' + escAttr(areaResmi(m)) + '" data-alamat="' + escAttr(alamatGabungan) + '" data-mid="' + escAttr(m.mid && m.mid !== '-' ? m.mid : '') + '" data-alasan="' + escAttr(m.alasan && m.alasan !== '-' ? m.alasan : '') + '" data-tagging="' + escAttr(tagging) + '">' +
+      // Catatan: data-alamat pakai m.alamat MENTAH (bukan alamatGabungan yang
+      // sudah digabung dgn Kota buat tampilan) — soalnya ini dikirim balik ke
+      // server buat dicocokkan persis dengan isi kolom "Alamat" di sheet.
+      // data-midmerchant = ID unik merchant dari core banking (kolom "MID"
+      // pertama), pembeda paling akurat kalau ada merchant beda tapi nama sama.
+      '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-kode="' + escAttr(m.kodeCabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '" data-status="' + escAttr(m.status) + '" data-nama-cabang="' + escAttr(namaCabang) + '" data-area="' + escAttr(areaResmi(m)) + '" data-alamat="' + escAttr(m.alamat && m.alamat !== '-' ? m.alamat : '') + '" data-midmerchant="' + escAttr(m.midMerchant && m.midMerchant !== '-' ? m.midMerchant : '') + '" data-mid="' + escAttr(m.mid && m.mid !== '-' ? m.mid : '') + '" data-alasan="' + escAttr(m.alasan && m.alasan !== '-' ? m.alasan : '') + '" data-tagging="' + escAttr(tagging) + '">' +
         '<div class="list-item-top">' +
           '<span class="list-item-nama">' + escHtml(m.namaMerchant) + '</span>' +
           '<div class="list-item-badges">' +
@@ -986,11 +902,19 @@ function escAttr(s) {
 // ── Modal update status ──────────────────────────────────────────
 var STATUS_VALID = ['Target', 'Penawaran', 'Done Konversi to LVM', 'Merchant Menolak', 'Merchant Tutup', 'Perlu Kunjungan MTI', 'Tetap pakai EDC & Optimalkan SV'];
 
-function bukaModal(kodeCabang, namaMerchant, statusSaatIni, namaCabang, alamat, mid, area, alasan, tagging) {
-  MODAL_TARGET = { kodeCabang: kodeCabang, namaMerchant: namaMerchant, namaCabang: namaCabang, area: area || '-' };
+function bukaModal(kodeCabang, namaMerchant, statusSaatIni, namaCabang, alamat, mid, area, alasan, tagging, midMerchant) {
+  // Alamat & midMerchant ikut disimpan di MODAL_TARGET & dikirim balik ke
+  // server sebagai pembeda tambahan — banyak merchant beda yang kebetulan
+  // punya nama sama persis dalam 1 cabang (mis. franchise "Restoran
+  // Sederhana"), jadi Kode Cabang + Nama Merchant doang tidak selalu unik.
+  // midMerchant (ID unik dari core banking) paling diandalkan; alamat jadi
+  // cadangan kalau midMerchant tidak tersedia. Lihat updatePipelineStatus()
+  // di Code.gs buat urutan prioritasnya.
+  MODAL_TARGET = { kodeCabang: kodeCabang, namaMerchant: namaMerchant, namaCabang: namaCabang, area: area || '-', alamat: alamat || '', midMerchant: midMerchant || '' };
   document.getElementById('modalMerchant').textContent = namaMerchant;
   document.getElementById('modalCabang').textContent = namaCabang + ' (' + kodeCabang + ')';
   document.getElementById('modalAlamat').textContent = alamat || '';
+  document.getElementById('modalMidMerchant').textContent = midMerchant ? ('MID Merchant: ' + midMerchant) : '';
   document.getElementById('modalMid').value = mid || '';
   document.getElementById('modalAlasan').value = alasan || '';
   if (tagging) {
@@ -1052,6 +976,8 @@ function simpanStatus() {
     action       : 'updateStatus',
     kodeCabang   : MODAL_TARGET.kodeCabang,
     namaMerchant : MODAL_TARGET.namaMerchant,
+    alamat       : MODAL_TARGET.alamat || '',
+    midMerchant  : MODAL_TARGET.midMerchant || '',
     status       : statusBaru,
     mid          : midValue,
     alasan       : alasanValue
@@ -1086,6 +1012,11 @@ function kirimUpdateStatus(params, target, statusBaru, midValue, alasanValue, si
 
       btn.disabled = false;
       btn.textContent = 'Simpan';
+      if (res.maintenance) {
+        errBox.textContent = 'Sistem sedang dalam pemeliharaan data, coba lagi nanti.';
+        errBox.classList.add('show');
+        return;
+      }
       if (!res.success) {
         errBox.textContent = res.error || 'Gagal menyimpan. Coba lagi.';
         errBox.classList.add('show');
@@ -1100,7 +1031,6 @@ function kirimUpdateStatus(params, target, statusBaru, midValue, alasanValue, si
           m.tanggalUpdate = 'Baru saja';
         }
       });
-      renderTabelArea();
       render();
       toast('Status berhasil diperbarui!');
       tampilkanWaPipeline(statusBaru, midValue, alasanValue);
