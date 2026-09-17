@@ -19,8 +19,8 @@
     }
 
     /* Top brand bar */
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; }
-    .topbar-nav-group { display: flex; align-items: center; gap: 8px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; flex-wrap: wrap; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .topbar-brand { display: flex; align-items: center; gap: 10px; }
     .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
     .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
@@ -238,6 +238,7 @@
   <div class="topbar-nav-group">
     <a class="topbar-nav" href="monitoring-area.html">Monitoring</a>
     <a class="topbar-nav" href="pipeline.html">Pipeline →</a>
+    <a class="topbar-nav" href="monitoring-top100-leakage.html">Leakage →</a>
   </div>
 </div>
 
