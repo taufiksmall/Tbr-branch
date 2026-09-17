@@ -387,20 +387,18 @@ var KODE_AREA_FILTER = '';
 var STATUS_FU_FILTER = '';
 var MODAL_TARGET = null; // { area, merchant } sedang diedit
 
-// Kolom follow up dianggap "kosong" kalau nilainya salah satu ini —
-// dipakai buat nentuin badge Sudah/Belum Follow Up.
-// "ketKonfirmasi" SENGAJA tidak dimasukkan di sini walau termasuk salah
-// satu dari 7 kolom hasil follow up: nilainya "Done" di SEMUA 722 baris
-// data sumber (flag konfirmasi/validasi data dari HQ, bukan penanda
-// follow up cabang), jadi kalau ikut dicek malah bikin badge Sudah/Belum
-// Follow Up selalu "Sudah" buat semua merchant sejak awal import,
-// padahal belum ada follow up baru sama sekali dari cabang.
-var FIELD_FOLLOWUP = ['keteranganLeakage', 'potensiWinback', 'penawaranPrima', 'penawaranLainnya', 'keteranganFollowUp', 'sumberPipeline'];
+// Merchant dianggap "Sudah Follow Up" kalau KETIGA kolom inti ini SEMUA
+// sudah terisi — bukan salah satu (OR), tapi semuanya (AND) — sesuai
+// definisi yang diminta. "Potensi Winback" kosong di 100% data sumber
+// (kolom baru, belum pernah ada sebelum website ini), jadi syarat ini
+// otomatis memastikan "Sudah Follow Up" cuma kepenuhi kalau cabang
+// BENERAN input lewat form di sini, bukan cuma bawaan data lama.
+var FIELD_FOLLOWUP_WAJIB = ['keteranganLeakage', 'potensiWinback', 'penawaranPrima'];
+function isiTerisi(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '' && v !== '-';
+}
 function sudahFollowUp(m) {
-  return FIELD_FOLLOWUP.some(function(k) {
-    var v = m[k];
-    return v !== undefined && v !== null && String(v).trim() !== '' && v !== '-';
-  });
+  return FIELD_FOLLOWUP_WAJIB.every(function(k) { return isiTerisi(m[k]); });
 }
 
 function formatAngka(n) {
