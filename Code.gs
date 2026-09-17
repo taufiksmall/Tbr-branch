@@ -183,6 +183,21 @@ function doGet(e) {
     }
   }
 
+  // ── DEBUG: bandingkan header ASLI di sheet "Pipeline Leakage Top 100"
+  //    vs. HEADER_LEAKAGE yang di-hardcode di Code.gs — dipakai buat
+  //    diagnosa kalau ada kolom yang kebaca 0/'-' padahal sheet-nya keisi.
+  //    Aman dihapus kapan saja, tidak dipakai oleh halaman manapun.
+  if (action === 'debugLeakageHeaders') {
+    var ssDebug = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetDebug = ssDebug.getSheetByName(CONFIG.NAMA_SHEET_LEAKAGE);
+    if (!sheetDebug) return jsonResponse({ error: 'Sheet tidak ditemukan: ' + CONFIG.NAMA_SHEET_LEAKAGE });
+    var headersAsli = sheetDebug.getRange(1, 1, 1, sheetDebug.getLastColumn()).getValues()[0];
+    var perbandingan = HEADER_LEAKAGE.map(function (h) {
+      return { diharapkan: h, ditemukan: headersAsli.indexOf(h) !== -1 };
+    });
+    return jsonResponse({ headersAsli: headersAsli, perbandingan: perbandingan });
+  }
+
   // ── UPDATE LEAKAGE FOLLOW UP: simpan hasil follow up satu merchant
   //    leakage (dipanggil dari modal monitoring-top100-leakage.html) ──
   if (action === 'updateLeakageFollowUp') {
