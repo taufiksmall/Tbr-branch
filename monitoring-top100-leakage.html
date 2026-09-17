@@ -66,9 +66,16 @@
     }
 
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 10px; }
-    .stat-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 6px; text-align: center; }
+    .stat-box {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 14px 6px; text-align: center;
+      min-width: 0; overflow: hidden;
+    }
     .stat-box.highlight { background: rgba(47,95,224,.12); border-color: rgba(47,95,224,.4); }
-    .stat-number { font-size: 22px; font-weight: 800; line-height: 1; color: #fff; }
+    .stat-number {
+      font-size: 22px; font-weight: 800; line-height: 1.1; color: #fff;
+      overflow-wrap: break-word; word-break: break-word;
+    }
     .stat-box.highlight .stat-number { color: #8faaf5; }
     .stat-box.sudah .stat-number { color: #5ee08a; }
     .stat-box.belum .stat-number { color: #fbbf24; }
@@ -409,8 +416,12 @@ function formatRasio(n) {
 // (Total Leakage dibagi jumlah merchant) masuk akal di angka ratusan
 // juta kalau dianggap Rupiah biasa. Jadi semua nilai finansial dibagi
 // 1 juta dulu sebelum ditampilkan dengan label "Jt".
-function formatRpJt(n) {
-  return (Number(n || 0) / 1000000).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// bulat=true (dipakai buat Total Leakage gabungan di Ringkasan) -> tanpa
+// desimal, supaya angka besar gabungan semua merchant tetap ringkas &
+// gak gampang overflow dari kotak statistik yang sempit.
+function formatRpJt(n, bulat) {
+  var opsi = bulat ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  return (Number(n || 0) / 1000000).toLocaleString('id-ID', opsi);
 }
 function escHtml(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -545,7 +556,7 @@ function render() {
   document.getElementById('statTotal').textContent = formatAngka(cakupan.length);
   document.getElementById('statSudah').textContent = formatAngka(sudah);
   document.getElementById('statBelum').textContent = formatAngka(cakupan.length - sudah);
-  document.getElementById('statTotalLeakage').textContent = formatRpJt(totalLeakage);
+  document.getElementById('statTotalLeakage').textContent = formatRpJt(totalLeakage, true);
 
   var wrap = document.getElementById('listLeakage');
   if (!filtered.length) {
