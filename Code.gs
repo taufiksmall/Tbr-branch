@@ -1205,17 +1205,17 @@ function tambahKolomEDCLVM() {
 // PIPELINE LEAKAGE TOP 100 — dipakai monitoring-top100-leakage.html.
 // Data awal (722 merchant, 7 Area) diimpor manual dari file Excel
 // "Pipeline Leakage Top 100" — lihat setupSheetLeakage() di bawah.
-// Beda dari "Pipeline EDC to LVM": di sini TIDAK ada Kode Cabang per
-// merchant, cuma Area (format "150 - MANADO" — 3 digit pertama dipakai
-// sebagai kode area buat filter/deep-link dari index.html & halamannya
-// sendiri, lihat kodeAreaDariString()).
+// Kolom "Cabang" (Kode Cabang) ditambahkan belakangan oleh admin
+// langsung di sheet — dibaca by-name lewat headers.indexOf() di
+// getLeakageAll(), jadi aman berapa pun posisi kolomnya di sheet.
 // ============================================================
 
-// Header kolom sheet "Pipeline Leakage Top 100", urut persis sesuai file
-// CSV import yang disiapkan. Kolom 1-18 data asal dari Excel, kolom
-// terakhir ("Tanggal Update Terakhir") diisi otomatis tiap ada follow up.
+// Header kolom sheet "Pipeline Leakage Top 100" — dipakai getLeakageAll()
+// buat tau kolom APA SAJA yang perlu dicari (posisinya dicari dinamis by
+// nama, bukan by urutan, jadi aman kalau admin nyisip kolom baru di sheet
+// selama namanya sama persis dengan salah satu string di bawah ini).
 var HEADER_LEAKAGE = [
-  'Area', 'Merchant', 'No CIF', 'No Rek Set',
+  'Area', 'Cabang', 'Merchant', 'No CIF', 'No Rek Set',
   'Sales Volume (Rp Jt)', 'Incoming Rekening Settlement (Rp Jt)', 'SV/Incoming Rek Settlement',
   'Leakage ke Rek Sendiri Non BMRI (Rp Jt)', 'Leakage ke Rek Pihak Ketiga Non BMRI (Rp Jt)',
   'Total Leakage (Rp Jt)', 'Leakage Ratio',
@@ -1311,6 +1311,7 @@ function getLeakageAll(kodeAreaFilter) {
       area              : area,
       kodeArea          : kodeAreaDariString(area),
       labelArea         : labelAreaLeakage(area),
+      kodeCabang        : String(row[idx['Cabang']] || '').trim() || '-',
       merchant          : merchant,
       noCif             : row[idx['No CIF']] || '-',
       noRekSet          : row[idx['No Rek Set']] || '-',

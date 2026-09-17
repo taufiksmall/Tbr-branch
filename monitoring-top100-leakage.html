@@ -278,14 +278,18 @@
           </select>
         </div>
         <div>
-          <label class="field-label">Status</label>
-          <select id="selectStatusFU" class="select-input">
-            <option value="">Semua</option>
-            <option value="sudah">Sudah Follow Up</option>
-            <option value="belum">Belum Follow Up</option>
+          <label class="field-label">Cabang</label>
+          <select id="selectCabang" class="select-input" disabled>
+            <option value="">Semua Cabang</option>
           </select>
         </div>
       </div>
+      <label class="field-label">Status</label>
+      <select id="selectStatusFU" class="select-input">
+        <option value="">Semua</option>
+        <option value="sudah">Sudah Follow Up</option>
+        <option value="belum">Belum Follow Up</option>
+      </select>
       <input type="text" id="searchBox" class="search-input" placeholder="Cari nama merchant...">
     </div>
 
@@ -382,8 +386,133 @@
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
 // ================================================================
 
+// ── Data Master Cabang (sama dengan pipeline.html/index.html) ────
+// Dipakai buat nampilin nama resmi cabang ("Kode - Nama") di dropdown
+// filter & modal, dari Kode Cabang mentah yang diisi admin di kolom
+// "Cabang" sheet Pipeline Leakage Top 100.
+var DATA_CABANG = {
+  "Area Manado": [
+    {kode:"15000",nama:"KC Manado Dotulolong Lasut"},{kode:"15001",nama:"KCP Manado Toar"},
+    {kode:"15002",nama:"KC Kotamobagu"},{kode:"15003",nama:"KC Bitung"},
+    {kode:"15004",nama:"KC Gorontalo"},{kode:"15005",nama:"KC Tahuna"},
+    {kode:"15006",nama:"KCP Manado Sam Ratulangi"},{kode:"15007",nama:"KCP Manado Sudirman"},
+    {kode:"15008",nama:"KCP Limboto"},{kode:"15010",nama:"KCP Manado Boulevard"},
+    {kode:"15011",nama:"KCP Marisa"},{kode:"15012",nama:"KCP Tomohon"},
+    {kode:"15015",nama:"KCP Amurang"},{kode:"15017",nama:"KCP Manado Bahu"},
+    {kode:"15018",nama:"KCP Manado Pasar Calaca"},{kode:"15019",nama:"KCP Girian"},
+    {kode:"15020",nama:"KCP Manado Paal Dua"},{kode:"15021",nama:"KCP Airmadidi"},
+    {kode:"15022",nama:"KCP Manado Town Square 3"},{kode:"15075",nama:"KCP Manado Airmadidi"},
+    {kode:"15076",nama:"KCP Manado Ratahan"},{kode:"15078",nama:"KCP Gorontalo Kwandang"},
+    {kode:"15079",nama:"KCP Paguyaman"},{kode:"15081",nama:"KCP Manado Paniki"},
+    {kode:"15082",nama:"KCP Manado Langowan"},{kode:"15083",nama:"KCP Gorontalo Agus Salim"},
+    {kode:"15085",nama:"KCP Tilamuta"},{kode:"15086",nama:"KCP Tondano"},
+    {kode:"15088",nama:"KCP Gorontalo Isimu"},{kode:"15089",nama:"KCP Manado Ringroad"},
+    {kode:"15090",nama:"KCP Bone Bolango Kabila"},{kode:"15091",nama:"KCP Siau"},
+    {kode:"15096",nama:"KCP Boalemo Wonosari"},{kode:"15097",nama:"KCP Lolak"}
+  ],
+  "Area Palu": [
+    {kode:"15100",nama:"KC Palu Sam Ratulangi"},{kode:"15101",nama:"KCP Palu Imam Bonjol"},
+    {kode:"15102",nama:"KCP Palu Hasanuddin"},{kode:"15103",nama:"KCP Donggala"},
+    {kode:"15104",nama:"KC Luwuk"},{kode:"15105",nama:"KCP Poso"},
+    {kode:"15106",nama:"KC Toli Toli"},{kode:"15107",nama:"KCP Parigi"},
+    {kode:"15109",nama:"KCP Ampana"},{kode:"15110",nama:"KCP Palu Basuki Rahmat"},
+    {kode:"15111",nama:"KCP Morowali Bahodopi"},{kode:"15112",nama:"KCP Tawaeli"},
+    {kode:"15175",nama:"KCP Pasangkayu"},{kode:"15177",nama:"KCP Toili"},
+    {kode:"15178",nama:"KCP Palu Moh Yamin"},{kode:"15179",nama:"KCP Palu Dewi Sartika"},
+    {kode:"15180",nama:"KCP Tentena"},{kode:"15181",nama:"KCP Kotaraya"},
+    {kode:"15182",nama:"KCP Buol"},{kode:"15184",nama:"KCP Parigi Tolai"},
+    {kode:"15185",nama:"KCP Banggai Bunta"},{kode:"15186",nama:"KCP Banggai Laut"},
+    {kode:"15187",nama:"KCP Morowali Beteleme"},{kode:"15188",nama:"KCP Toli Toli Soni"},
+    {kode:"15189",nama:"KCP Morowali Bungku"},{kode:"15190",nama:"KCP Banggai Kepulauan"},
+    {kode:"15191",nama:"KCP Sigi"}
+  ],
+  "Area Makassar Kartini": [
+    {kode:"15200",nama:"KC Makassar Kartini"},{kode:"15201",nama:"KCP Makassar Sulawesi"},
+    {kode:"15202",nama:"KCP Makassar Cokroaminoto"},{kode:"15203",nama:"KCP Semen Tonasa"},
+    {kode:"15213",nama:"KCP Makassar Slamet Riyadi"},{kode:"15216",nama:"KCP Makassar Daya"},
+    {kode:"15220",nama:"KCP Makassar Andalas"},{kode:"15221",nama:"KCP Makassar Veteran"},
+    {kode:"15225",nama:"KCP Makassar R.S. Stella Maris"},{kode:"15237",nama:"KCP Makassar Universitas Hasanuddin"},
+    {kode:"15238",nama:"KCP Makassar Pelabuhan Indonesia"},{kode:"15242",nama:"KCP Makassar Pasar Sentral"},
+    {kode:"15243",nama:"KCP Makassar Sombaopu"},{kode:"15244",nama:"KCP Pangkep Hasanuddin"},
+    {kode:"15245",nama:"KCP Makassar Pusat Grosir Daya"},{kode:"15246",nama:"KCP Makassar Perintis Kemerdekaan"},
+    {kode:"15248",nama:"KCP Maros Sudirman"},{kode:"15249",nama:"KCP Makassar Urip Sumoharjo"},
+    {kode:"15250",nama:"KCP Makassar Monginsidi"},{kode:"15251",nama:"KCP Makassar CPI"},
+    {kode:"15252",nama:"KCP Makassar Latimojong"},{kode:"15269",nama:"KCP Maros Camba"},
+    {kode:"15271",nama:"KCP Makassar Pannampu"},{kode:"15291",nama:"KCP Makassar BTP"},
+    {kode:"15293",nama:"KCP Makassar Paccerakkang"},{kode:"15297",nama:"KCP Makassar Sudiang"}
+  ],
+  "Area Kendari": [
+    {kode:"16200",nama:"KC Kendari Mesjid Agung"},{kode:"16201",nama:"KCP Kendari Beach"},
+    {kode:"16202",nama:"KCP Bau Bau"},{kode:"16203",nama:"KC Pomalaa"},
+    {kode:"16204",nama:"KCP Kolaka"},{kode:"16205",nama:"KCP Wua Wua"},
+    {kode:"16206",nama:"KCP Kolaka Utara"},{kode:"16207",nama:"KCP Kendari Bundaran Anduonohu"},
+    {kode:"16208",nama:"KCP Kendari Lepo-Lepo"},{kode:"16210",nama:"KCP Morosi"},
+    {kode:"16275",nama:"KCP Kendari Andunouhu"},{kode:"16276",nama:"KCP Tinanggea"},
+    {kode:"16277",nama:"KCP Pasarwajo"},{kode:"16278",nama:"KCP Molawe"},
+    {kode:"16279",nama:"KCP Raha"},{kode:"16280",nama:"KCP Bombana"},
+    {kode:"16281",nama:"KCP Unaaha"},{kode:"16282",nama:"KCP Buton Lombe"},
+    {kode:"16283",nama:"KCP Baubau Wolio"},{kode:"16284",nama:"KCP Rate Rate"},
+    {kode:"16285",nama:"KCP Lapai"}
+  ],
+  "Area Pare Pare": [
+    {kode:"17000",nama:"KC Pare Pare"},{kode:"17001",nama:"KCP Pinrang"},
+    {kode:"17002",nama:"KCP Polewali Mandar"},{kode:"17003",nama:"KCP Pare-Pare Pattompo"},
+    {kode:"17004",nama:"KCP Mamuju"},{kode:"17005",nama:"KC Watampone"},
+    {kode:"17006",nama:"KCP Sengkang"},{kode:"17007",nama:"KC Palopo"},
+    {kode:"17008",nama:"KCP Rantepao"},{kode:"17009",nama:"KC Soroako"},
+    {kode:"17010",nama:"KCP Sidrap Sudirman"},{kode:"17011",nama:"KCP Sinjai Pasar Sentral"},
+    {kode:"17015",nama:"KCP Kahu"},{kode:"17016",nama:"KCP Majene"},
+    {kode:"17075",nama:"KCP Topoyo"},{kode:"17076",nama:"KCP Sidrap"},
+    {kode:"17077",nama:"KCP Siwa"},{kode:"17078",nama:"KCP Soppeng"},
+    {kode:"17079",nama:"KCP Belopa"},{kode:"17080",nama:"KCP Masamba"},
+    {kode:"17082",nama:"KCP Barru"},{kode:"17083",nama:"KCP Tomoni"},
+    {kode:"17084",nama:"KCP Malili"},{kode:"17085",nama:"KCP Polewali Mandar Pekkabata"},
+    {kode:"17087",nama:"KCP Toraja Makale"},{kode:"17088",nama:"KCP Enrekang Pasar Sudu"},
+    {kode:"17091",nama:"KCP Bone Bone"}
+  ],
+  "Area Makassar Ratulangi": [
+    {kode:"17400",nama:"KC Makassar Sam Ratulangi"},{kode:"17401",nama:"KCP Makassar Panakkukang"},
+    {kode:"17402",nama:"KCP Makassar Hertasning"},{kode:"17403",nama:"KCP Sungguminasa"},
+    {kode:"17404",nama:"KCP Makassar Cendrawasih"},{kode:"17406",nama:"KCP Makassar Toddopuli"},
+    {kode:"17407",nama:"KCP Bulukumba"},{kode:"17408",nama:"KCP Makassar Pettarani"},
+    {kode:"17409",nama:"KCP Makassar Veteran Selatan"},{kode:"17410",nama:"KCP Bantaeng Pahlawan"},
+    {kode:"17411",nama:"KCP Jeneponto"},{kode:"17451",nama:"KCP Selayar"},
+    {kode:"17452",nama:"KCP Gowa Malino"},{kode:"17453",nama:"KCP Bantaeng Tanetea"},
+    {kode:"17454",nama:"KCP Takalar"},{kode:"17455",nama:"KCP Limbung"},
+    {kode:"17456",nama:"KCP Hartaco"},{kode:"17457",nama:"KCP Antang"},
+    {kode:"17458",nama:"KCP Gowa Pallangga"},{kode:"17459",nama:"KCP Gowa Balang-Balang"},
+    {kode:"17462",nama:"KCP Bulukumba Tanete"},{kode:"17463",nama:"KCP Barombong"}
+  ],
+  "Area Maluku": [
+    {kode:"18600",nama:"KC Ambon Pantai Mardika"},{kode:"18601",nama:"KC Ambon Pattimura"},
+    {kode:"18602",nama:"KC Ternate"},{kode:"18603",nama:"KCP Ambon Paso"},
+    {kode:"18604",nama:"KCP Ambon Masohi"},{kode:"18605",nama:"KCP Ambon Namlea"},
+    {kode:"18607",nama:"KCP Maluku Tenggara"},{kode:"18608",nama:"KCP Ternate Pahlawan Revolusi"},
+    {kode:"18609",nama:"KCP Buli"},{kode:"18610",nama:"KCP Tobelo"},
+    {kode:"18611",nama:"KCP Sofifi"},{kode:"18612",nama:"KCP Ambon Universitas Pattimura"},
+    {kode:"18613",nama:"KCP Indonesia Weda Bay Industrial Park"},{kode:"18651",nama:"KCP Bula"},
+    {kode:"18652",nama:"KCP Gemba"},{kode:"18654",nama:"KCP Waeapo"},
+    {kode:"18655",nama:"KCP Wayame"},{kode:"18656",nama:"KCP Saumlaki"},
+    {kode:"18657",nama:"KCP Ternate Bastiong"},{kode:"18658",nama:"KCP Labuha"},
+    {kode:"18659",nama:"KCP Weda"},{kode:"18660",nama:"KCP Jailolo"},
+    {kode:"18661",nama:"KCP Obi"}
+  ]
+};
+
+var KODE_TO_NAMA = {};
+Object.keys(DATA_CABANG).forEach(function(area) {
+  DATA_CABANG[area].forEach(function(c) { KODE_TO_NAMA[c.kode] = c.nama; });
+});
+
+// Nama Cabang resmi dari Kode Cabang — fallback ke kode mentahnya sendiri
+// kalau kodenya belum/tidak ada di master (mis. admin salah ketik).
+function namaCabangResmi(kode) {
+  return KODE_TO_NAMA[kode] || kode;
+}
+
 var DATA_ALL = [];
 var KODE_AREA_FILTER = '';
+var KODE_CABANG_FILTER = '';
 var STATUS_FU_FILTER = '';
 var MODAL_TARGET = null; // { area, merchant } sedang diedit
 
@@ -438,6 +567,13 @@ window.onload = function() {
   // area itu terus — dropdown Area jadi cuma nampilin 1 pilihan, gak
   // bisa pindah ke area lain sama sekali (bug yang sempat kejadian).
   KODE_AREA_FILTER = params.get('area') || '';
+  // "kode" (Kode Cabang lengkap, mis. "15200") dari index.html — kalau ada,
+  // pakai ini buat filter awal Cabang, dan turunkan 3 digit pertamanya
+  // sebagai filter awal Area juga (biar dropdown Area ikut ke-set benar).
+  KODE_CABANG_FILTER = params.get('kode') || '';
+  if (KODE_CABANG_FILTER && !KODE_AREA_FILTER) {
+    KODE_AREA_FILTER = KODE_CABANG_FILTER.substring(0, 3);
+  }
 
   var url = APPS_SCRIPT_URL + '?action=getLeakageAll';
 
@@ -495,14 +631,9 @@ function tampilkanData() {
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('kontenLeakage').style.display = 'block';
 
-  var subtitle = document.getElementById('headerSubtitle');
-  if (KODE_AREA_FILTER && DATA_ALL.length) {
-    subtitle.textContent = DATA_ALL[0].labelArea + ' · Follow Up Merchant Leakage';
-  } else {
-    subtitle.textContent = 'Follow Up Merchant Leakage per Area';
-  }
-
+  perbaruiSubtitle();
   isiFilterArea();
+  isiFilterCabang();
   render();
 
   document.getElementById('searchBox').addEventListener('input', render);
@@ -512,6 +643,14 @@ function tampilkanData() {
   });
   document.getElementById('selectArea').addEventListener('change', function() {
     KODE_AREA_FILTER = this.value;
+    KODE_CABANG_FILTER = ''; // cabang lama mungkin sudah tidak relevan buat area baru
+    isiFilterCabang();
+    perbaruiSubtitle();
+    render();
+  });
+  document.getElementById('selectCabang').addEventListener('change', function() {
+    KODE_CABANG_FILTER = this.value;
+    perbaruiSubtitle();
     render();
   });
   document.getElementById('listLeakage').addEventListener('click', function(ev) {
@@ -519,6 +658,29 @@ function tampilkanData() {
     if (!item) return;
     bukaModal(item.dataset.area, item.dataset.merchant);
   });
+}
+
+// Judul di bawah "Monitoring Top 100 Leakage" — cari dari data yang
+// BENERAN cocok sama filter aktif (bukan DATA_ALL[0], yang selalu
+// merchant pertama di seluruh 712 baris apa pun filternya sejak
+// getLeakageAll() diubah buat selalu ambil semua data sekaligus).
+function perbaruiSubtitle() {
+  var subtitle = document.getElementById('headerSubtitle');
+  if (KODE_CABANG_FILTER) {
+    var mCabang = DATA_ALL.filter(function(m) { return m.kodeCabang === KODE_CABANG_FILTER; })[0];
+    subtitle.textContent = mCabang
+      ? (namaCabangResmi(mCabang.kodeCabang) + ' · Follow Up Merchant Leakage')
+      : 'Follow Up Merchant Leakage per Area';
+    return;
+  }
+  if (KODE_AREA_FILTER) {
+    var mArea = DATA_ALL.filter(function(m) { return m.kodeArea === KODE_AREA_FILTER; })[0];
+    subtitle.textContent = mArea
+      ? (mArea.labelArea + ' · Follow Up Merchant Leakage')
+      : 'Follow Up Merchant Leakage per Area';
+    return;
+  }
+  subtitle.textContent = 'Follow Up Merchant Leakage per Area';
 }
 
 function isiFilterArea() {
@@ -531,11 +693,32 @@ function isiFilterArea() {
   if (KODE_AREA_FILTER) areaSel.value = KODE_AREA_FILTER;
 }
 
+// Dropdown Cabang: cuma nampilin cabang yang beneran punya merchant di
+// area yang lagi dipilih (atau semua cabang lintas area kalau "Semua
+// Area"), diurutkan berdasarkan Kode Cabang — sama seperti pipeline.html.
+function isiFilterCabang() {
+  var cabangSel = document.getElementById('selectCabang');
+  var relevan = KODE_AREA_FILTER ? DATA_ALL.filter(function(m) { return m.kodeArea === KODE_AREA_FILTER; }) : DATA_ALL;
+  var kodeSet = {};
+  relevan.forEach(function(m) { if (m.kodeCabang && m.kodeCabang !== '-') kodeSet[m.kodeCabang] = true; });
+  var kodeList = Object.keys(kodeSet).sort(function(a, b) {
+    var na = Number(a), nb = Number(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return a.localeCompare(b);
+  });
+
+  cabangSel.disabled = kodeList.length === 0;
+  cabangSel.innerHTML = '<option value="">Semua Cabang</option>' +
+    kodeList.map(function(k) { return '<option value="' + escAttr(k) + '">' + k + ' - ' + escHtml(namaCabangResmi(k)) + '</option>'; }).join('');
+  if (KODE_CABANG_FILTER) cabangSel.value = KODE_CABANG_FILTER;
+}
+
 function render() {
   var keyword = (document.getElementById('searchBox').value || '').toLowerCase().trim();
 
   var filtered = DATA_ALL.filter(function(m) {
     if (KODE_AREA_FILTER && m.kodeArea !== KODE_AREA_FILTER) return false;
+    if (KODE_CABANG_FILTER && m.kodeCabang !== KODE_CABANG_FILTER) return false;
     var sudah = sudahFollowUp(m);
     if (STATUS_FU_FILTER === 'sudah' && !sudah) return false;
     if (STATUS_FU_FILTER === 'belum' && sudah) return false;
@@ -545,7 +728,11 @@ function render() {
 
   // Ringkasan dihitung dari cakupan Area yang dipilih (bukan hasil
   // pencarian/status), supaya angkanya tetap relevan dengan scope yang dilihat.
-  var cakupan = DATA_ALL.filter(function(m) { return !KODE_AREA_FILTER || m.kodeArea === KODE_AREA_FILTER; });
+  var cakupan = DATA_ALL.filter(function(m) {
+    if (KODE_AREA_FILTER && m.kodeArea !== KODE_AREA_FILTER) return false;
+    if (KODE_CABANG_FILTER && m.kodeCabang !== KODE_CABANG_FILTER) return false;
+    return true;
+  });
   var sudah = 0, totalLeakage = 0;
   cakupan.forEach(function(m) {
     if (sudahFollowUp(m)) sudah++;
@@ -575,7 +762,7 @@ function render() {
           '<span class="list-item-nama">' + escHtml(m.merchant) + '</span>' +
           '<div class="list-item-badges">' + badgeStatus + '</div>' +
         '</div>' +
-        '<div class="list-item-info">' + escHtml(m.labelArea) + ' · Rek ' + escHtml(m.noRekSet) + '</div>' +
+        '<div class="list-item-info">' + escHtml(m.labelArea) + ' · ' + escHtml(namaCabangResmi(m.kodeCabang)) + ' · Rek ' + escHtml(m.noRekSet) + '</div>' +
         '<div class="list-item-fin">' +
           '<span>SV: <b>Rp ' + formatRpJt(m.salesVolume) + ' Jt</b></span>' +
           '<span>Leakage: <b>Rp ' + formatRpJt(m.totalLeakage) + ' Jt</b></span>' +
@@ -597,7 +784,7 @@ function bukaModal(area, merchant) {
   MODAL_TARGET = { area: area, merchant: merchant };
 
   document.getElementById('modalMerchant').textContent = m.merchant;
-  document.getElementById('modalArea').textContent = m.labelArea;
+  document.getElementById('modalArea').textContent = m.labelArea + (m.kodeCabang && m.kodeCabang !== '-' ? ' · ' + namaCabangResmi(m.kodeCabang) : '');
   document.getElementById('modalRek').textContent = 'No CIF ' + m.noCif + ' · No Rek ' + m.noRekSet;
 
   document.getElementById('infoBox').innerHTML = '' +
