@@ -112,6 +112,23 @@
     .search-input::placeholder, textarea.select-input::placeholder { color: rgba(255,255,255,.35); }
     .search-input:focus, select.select-input:focus, textarea.select-input:focus { border-color: rgba(255,255,255,.35); background-color: rgba(255,255,255,.08); }
 
+    input[type="file"].select-input {
+      padding: 12px 14px; font-size: 13px; color: rgba(255,255,255,.75);
+    }
+    input[type="file"].select-input::file-selector-button {
+      margin-right: 12px; padding: 8px 14px; border: none; border-radius: 8px;
+      background: linear-gradient(135deg, #4472ef, #2b4fd6); color: #fff;
+      font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+    }
+    .preview-foto-followup {
+      width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,.14);
+      display: block; margin-bottom: 8px;
+    }
+    .btn-hapus-foto-followup {
+      background: none; border: none; color: #ff8fa3; font-size: 12.5px; font-weight: 700;
+      cursor: pointer; font-family: inherit; text-decoration: underline; padding: 0; margin-bottom: 12px;
+    }
+
     .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
     .filter-tab {
       display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
@@ -370,6 +387,13 @@
         <option value="Belum">Belum</option>
       </select>
 
+      <label class="field-label">Foto Kunjungan</label>
+      <div id="previewFotoFollowUpWrap" style="display:none;">
+        <img id="previewFotoFollowUp" class="preview-foto-followup" alt="Preview foto kunjungan">
+        <button type="button" id="btnHapusFotoFollowUp" class="btn-hapus-foto-followup">Hapus &amp; pilih ulang</button>
+      </div>
+      <input type="file" id="fFotoKunjungan" class="select-input" accept="image/*">
+
       <div class="modal-actions">
         <button class="modal-cancel" id="modalCancel" type="button">Batal</button>
         <button class="modal-save" id="modalSave" type="button">Simpan</button>
@@ -516,6 +540,12 @@ var KODE_AREA_FILTER = '';
 var KODE_CABANG_FILTER = '';
 var STATUS_FU_FILTER = '';
 var MODAL_TARGET = null; // { area, merchant } sedang diedit
+
+// Foto kunjungan follow up — wajib ADA (baru dipilih di sesi ini ATAU
+// sudah pernah tersimpan sebelumnya), tapi TIDAK wajib diganti tiap kali
+// modal dibuka buat edit field lain. Lihat bukaModal()/simpanFollowUp().
+var FOTO_FOLLOWUP_NEW_DATA_URL = '';   // foto baru yang dipilih di sesi modal ini (data URL)
+var FOTO_FOLLOWUP_EXISTING_URL = '';   // foto yang sudah tersimpan di sheet buat merchant ini (URL Drive)
 
 // Merchant dianggap "Sudah Follow Up" kalau KETIGA kolom inti ini SEMUA
 // sudah terisi — bukan salah satu (OR), tapi semuanya (AND) — sesuai
@@ -809,9 +839,72 @@ function bukaModal(area, merchant) {
   document.getElementById('fSumberPipeline').value = m.sumberPipeline !== '-' ? m.sumberPipeline : '';
   document.getElementById('fKetKonfirmasi').value = m.ketKonfirmasi !== '-' ? m.ketKonfirmasi : '';
 
+  FOTO_FOLLOWUP_NEW_DATA_URL = '';
+  FOTO_FOLLOWUP_EXISTING_URL = (m.fotoUrl && m.fotoUrl !== '-') ? m.fotoUrl : '';
+  document.getElementById('fFotoKunjungan').value = '';
+  tampilkanPreviewFotoFollowUp();
+
   document.getElementById('modalError').classList.remove('show');
   document.getElementById('modalOverlay').classList.add('show');
 }
+
+// ── Foto Kunjungan (follow up) ────────────────────────────────────
+function resizeFoto(file, maxDim, kualitas) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', kualitas));
+      };
+      img.onerror = function() { reject(new Error('Gagal membaca gambar. Coba foto lain.')); };
+      img.src = ev.target.result;
+    };
+    reader.onerror = function() { reject(new Error('Gagal membaca file.')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Prioritas tampilan: foto baru (data URL) > foto lama yang sudah
+// tersimpan (URL Drive) > kosong (belum ada foto sama sekali).
+function tampilkanPreviewFotoFollowUp() {
+  var wrap = document.getElementById('previewFotoFollowUpWrap');
+  var img = document.getElementById('previewFotoFollowUp');
+  var sumber = FOTO_FOLLOWUP_NEW_DATA_URL || FOTO_FOLLOWUP_EXISTING_URL;
+  if (sumber) {
+    img.src = sumber;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+    img.src = '';
+  }
+}
+
+document.getElementById('fFotoKunjungan').addEventListener('change', function(ev) {
+  var file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  resizeFoto(file, 1600, 0.72).then(function(dataUrl) {
+    FOTO_FOLLOWUP_NEW_DATA_URL = dataUrl;
+    tampilkanPreviewFotoFollowUp();
+  }).catch(function(err) {
+    alert(err.message);
+  });
+});
+
+document.getElementById('btnHapusFotoFollowUp').addEventListener('click', function() {
+  FOTO_FOLLOWUP_NEW_DATA_URL = '';
+  FOTO_FOLLOWUP_EXISTING_URL = '';
+  document.getElementById('fFotoKunjungan').value = '';
+  tampilkanPreviewFotoFollowUp();
+});
 
 function tutupModal() {
   document.getElementById('modalOverlay').classList.remove('show');
@@ -823,6 +916,15 @@ function simpanFollowUp() {
   var btn = document.getElementById('modalSave');
   var errBox = document.getElementById('modalError');
   errBox.classList.remove('show');
+
+  // Foto wajib ADA — baru dipilih di sesi ini, atau sudah pernah
+  // tersimpan sebelumnya (lihat bukaModal()). Bukan wajib DIGANTI tiap
+  // kali modal dibuka cuma buat edit field lain.
+  if (!FOTO_FOLLOWUP_NEW_DATA_URL && !FOTO_FOLLOWUP_EXISTING_URL) {
+    errBox.textContent = 'Foto kunjungan wajib diisi.';
+    errBox.classList.add('show');
+    return;
+  }
 
   // Input "Potensi Winback" diketik cabang dalam satuan Jt (juta) biar
   // gampang — dikonversi balik ke Rupiah biasa di sini SEBELUM dikirim &
@@ -844,14 +946,28 @@ function simpanFollowUp() {
   btn.disabled = true;
   btn.textContent = 'Menyimpan...';
 
-  var params = new URLSearchParams({
-    action  : 'updateLeakageFollowUp',
-    area    : MODAL_TARGET.area,
-    merchant: MODAL_TARGET.merchant
-  });
-  Object.keys(nilai).forEach(function(k) { params.append(k, nilai[k]); });
+  var m = cariMerchant(MODAL_TARGET.area, MODAL_TARGET.merchant);
+  var payload = Object.assign({
+    action    : 'updateLeakageFollowUp',
+    area      : MODAL_TARGET.area,
+    merchant  : MODAL_TARGET.merchant,
+    kodeCabang: m ? m.kodeCabang : ''
+  }, nilai);
 
-  fetch(APPS_SCRIPT_URL + '?' + params.toString())
+  // Foto CUMA dikirim kalau ada yang baru dipilih di sesi modal ini —
+  // kalau cabang cuma edit field lain, foto lama di sheet TETAP dipakai
+  // (lihat updateLeakageFollowUp() di Code.gs).
+  if (FOTO_FOLLOWUP_NEW_DATA_URL) {
+    payload.fotoBase64 = FOTO_FOLLOWUP_NEW_DATA_URL.split(',')[1] || '';
+    var fotoMimeMatch = FOTO_FOLLOWUP_NEW_DATA_URL.match(/^data:([^;]+);/);
+    payload.fotoMime = fotoMimeMatch ? fotoMimeMatch[1] : 'image/jpeg';
+  }
+
+  fetch(APPS_SCRIPT_URL, {
+    method  : 'POST',
+    headers : { 'Content-Type': 'text/plain;charset=utf-8' },
+    body    : JSON.stringify(payload)
+  })
     .then(function(r) { return r.json(); })
     .then(function(res) {
       btn.disabled = false;
@@ -865,6 +981,7 @@ function simpanFollowUp() {
       if (m) {
         Object.keys(nilai).forEach(function(k) { m[k] = nilai[k] || '-'; });
         m.tanggalUpdate = 'Baru saja';
+        if (res.fotoUrl) m.fotoUrl = res.fotoUrl;
       }
       tutupModal();
       render();

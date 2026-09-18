@@ -264,6 +264,26 @@ function doPost(e) {
     }
   }
 
+  // ── UPDATE LEAKAGE FOLLOW UP (POST): sama seperti versi doGet, tapi
+  //    lewat POST supaya bisa bawa fotoBase64 kalau cabang upload/ganti
+  //    foto kunjungan saat follow up. Foto OPSIONAL di sini — kalau
+  //    fotoBase64 kosong berarti cabang cuma edit field lain & foto yang
+  //    sudah tersimpan sebelumnya (kalau ada) TETAP dipertahankan, tidak
+  //    ditimpa kosong. Wajib-ada-foto (baru ATAU sudah pernah ada)
+  //    divalidasi di sisi frontend sebelum request ini dikirim.
+  if (action === 'updateLeakageFollowUp') {
+    try {
+      if (data.fotoBase64) {
+        data.fotoUrl = simpanFotoKunjungan(data.fotoBase64, data.fotoMime, data.kodeCabang, data.merchant);
+      }
+      var hasilUpd = updateLeakageFollowUp(data);
+      if (hasilUpd.error) return jsonResponse({ success: false, error: hasilUpd.error });
+      return jsonResponse({ success: true, fotoUrl: data.fotoUrl || '' });
+    } catch (err) {
+      return jsonResponse({ success: false, error: err.message });
+    }
+  }
+
   return jsonResponse({ success: false, error: 'Action POST tidak dikenal: ' + action });
 }
 
@@ -502,17 +522,19 @@ function susunTeksWA(tanggal, area, cabang, kode, lvm, edc, edcPot, total, plasL
 
 // Simpan foto hasil kunjungan (base64, sudah dikompres di sisi browser)
 // ke folder Drive khusus, bikin bisa diakses lewat link (view-only), lalu
-// balikin URL-nya buat ditulis ke kolom "Foto Kunjungan" di sheet.
+// balikin URL-nya buat ditulis ke kolom "Foto Kunjungan" di sheet. Dipakai
+// bareng oleh laporan akuisisi harian (label = tanggal laporan) & follow up
+// leakage Top 100 (label = nama merchant) — cuma buat penamaan file Drive.
 // Sengaja pakai format "uc?export=view&id=..." (bukan file.getUrl(), yang
 // balikin URL halaman VIEWER Drive) supaya bisa langsung dipasang di
-// <img src="..."> di laporan.html — sekaligus tetap bisa dibuka manual
-// di browser/WhatsApp.
-function simpanFotoKunjungan(base64, mime, kodeCabang, tanggal) {
+// <img src="..."> di laporan.html / monitoring-top100-leakage.html —
+// sekaligus tetap bisa dibuka manual di browser/WhatsApp.
+function simpanFotoKunjungan(base64, mime, kodeCabang, label) {
   var folder = getOrCreateFolderFotoKunjungan();
   var mimeType = mime || 'image/jpeg';
   var bytes = Utilities.base64Decode(base64);
   var ekstensi = mimeType.indexOf('png') !== -1 ? 'png' : 'jpg';
-  var namaFile = 'Kunjungan_' + (kodeCabang || 'XXXXX') + '_' + (tanggal || 'tanggal') + '_' + new Date().getTime() + '.' + ekstensi;
+  var namaFile = 'Kunjungan_' + (kodeCabang || 'XXXXX') + '_' + (label || 'foto') + '_' + new Date().getTime() + '.' + ekstensi;
   var blob = Utilities.newBlob(bytes, mimeType, namaFile);
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -1319,13 +1341,18 @@ function tambahKolomEDCLVM() {
 // buat tau kolom APA SAJA yang perlu dicari (posisinya dicari dinamis by
 // nama, bukan by urutan, jadi aman kalau admin nyisip kolom baru di sheet
 // selama namanya sama persis dengan salah satu string di bawah ini).
+// NOTE: beberapa nama kolom di bawah ini sengaja "aneh" (tanda bintang,
+// spasi ganda, tanpa "(Rp Jt)", huruf kecil) karena disamakan PERSIS
+// dengan header asli di sheet "Pipeline Leakage Top 100" — dicek lewat
+// action=debugLeakageHeaders. Jangan "dirapikan" tanpa cek ulang ke sheet,
+// nanti kolomnya kebaca 0/'-' lagi kayak bug sebelumnya.
 var HEADER_LEAKAGE = [
   'Area', 'Cabang', 'Merchant', 'No CIF', 'No Rek Set',
-  'Sales Volume (Rp Jt)', 'Incoming Rekening Settlement (Rp Jt)', 'SV/Incoming Rek Settlement',
-  'Leakage ke Rek Sendiri Non BMRI (Rp Jt)', 'Leakage ke Rek Pihak Ketiga Non BMRI (Rp Jt)',
+  'Sales Volume (Rp Jt)', 'Incoming Rekening Settlement (Rp Jt)*', 'SV/Incoming Rek Settlement',
+  'Leakage ke Rek Sendiri Non BMRI (Rp Jt)', 'Leakage ke Rek Pihak Ketiga Non BMRI  (Rp Jt)',
   'Total Leakage (Rp Jt)', 'Leakage Ratio',
-  'Keterangan Leakage', 'Potensi Winback (Rp Jt)', 'Penawaran Prima/Prima Xtra (Y/N)',
-  'Penawaran Lainnya', 'Keterangan Follow Up', 'Pipeline', 'Ket Konfirmasi',
+  'Keterangan Leakage', 'Potensi Winback', 'Penawaran Prima/Prima Xtra (Y/N)',
+  'Penawaran Lainnya', 'Keterangan Follow Up', 'pipeline', 'Ket Konfirmasi',
   'Tanggal Update Terakhir'
 ];
 
@@ -1335,11 +1362,11 @@ var HEADER_LEAKAGE = [
 // <-> backend selalu sinkron di SATU tempat ini saja.
 var FIELD_FOLLOWUP_LEAKAGE = [
   { key: 'keteranganLeakage', header: 'Keterangan Leakage',                 valid: KETERANGAN_LEAKAGE_VALID },
-  { key: 'potensiWinback',    header: 'Potensi Winback (Rp Jt)',            valid: null },
+  { key: 'potensiWinback',    header: 'Potensi Winback',                    valid: null },
   { key: 'penawaranPrima',    header: 'Penawaran Prima/Prima Xtra (Y/N)',   valid: PENAWARAN_PRIMA_VALID },
   { key: 'penawaranLainnya',  header: 'Penawaran Lainnya',                  valid: null },
   { key: 'keteranganFollowUp',header: 'Keterangan Follow Up',               valid: null },
-  { key: 'sumberPipeline',    header: 'Pipeline',                          valid: SUMBER_PIPELINE_VALID },
+  { key: 'sumberPipeline',    header: 'pipeline',                          valid: SUMBER_PIPELINE_VALID },
   { key: 'ketKonfirmasi',     header: 'Ket Konfirmasi',                     valid: KET_KONFIRMASI_VALID }
 ];
 
@@ -1402,6 +1429,7 @@ function getLeakageAll(kodeAreaFilter) {
   var headers = data[0];
   var idx = {};
   HEADER_LEAKAGE.forEach(function (h) { idx[h] = headers.indexOf(h); });
+  var idxFoto = headers.indexOf('Foto Kunjungan'); // belum tentu ada sampai follow up pertama kali disimpan dengan foto
 
   var kodeCari = String(kodeAreaFilter || '').trim();
   var hasil = [];
@@ -1421,13 +1449,14 @@ function getLeakageAll(kodeAreaFilter) {
       noCif             : row[idx['No CIF']] || '-',
       noRekSet          : row[idx['No Rek Set']] || '-',
       salesVolume       : Number(row[idx['Sales Volume (Rp Jt)']]) || 0,
-      incomingRek       : Number(row[idx['Incoming Rekening Settlement (Rp Jt)']]) || 0,
+      incomingRek       : Number(row[idx['Incoming Rekening Settlement (Rp Jt)*']]) || 0,
       svIncomingRatio   : Number(row[idx['SV/Incoming Rek Settlement']]) || 0,
       leakageRekSendiri : Number(row[idx['Leakage ke Rek Sendiri Non BMRI (Rp Jt)']]) || 0,
-      leakageRekPihak3  : Number(row[idx['Leakage ke Rek Pihak Ketiga Non BMRI (Rp Jt)']]) || 0,
+      leakageRekPihak3  : Number(row[idx['Leakage ke Rek Pihak Ketiga Non BMRI  (Rp Jt)']]) || 0,
       totalLeakage      : Number(row[idx['Total Leakage (Rp Jt)']]) || 0,
       leakageRatio      : Number(row[idx['Leakage Ratio']]) || 0,
-      tanggalUpdate     : row[idx['Tanggal Update Terakhir']] ? formatTanggal(row[idx['Tanggal Update Terakhir']]) : '-'
+      tanggalUpdate     : row[idx['Tanggal Update Terakhir']] ? formatTanggal(row[idx['Tanggal Update Terakhir']]) : '-',
+      fotoUrl           : (idxFoto !== -1 && row[idxFoto]) ? row[idxFoto] : '-'
     };
     FIELD_FOLLOWUP_LEAKAGE.forEach(function (f) {
       item[f.key] = row[idx[f.header]] || '-';
@@ -1462,6 +1491,11 @@ function updateLeakageFollowUp(p) {
     }
   }
 
+  // Foto opsional di sini (lihat komentar di doPost): kolomnya di-auto-
+  // create kalau belum ada, sama kayak 'Foto Kunjungan' di sheet "Laporan
+  // Harian" — biar gak perlu admin nambahin manual dulu.
+  pastikanKolomAda(sheet, 'Foto Kunjungan');
+
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return { error: 'Data Pipeline Leakage Top 100 masih kosong.' };
 
@@ -1469,6 +1503,7 @@ function updateLeakageFollowUp(p) {
   var idxArea     = headers.indexOf('Area');
   var idxMerchant = headers.indexOf('Merchant');
   var idxTgl      = headers.indexOf('Tanggal Update Terakhir');
+  var idxFoto     = headers.indexOf('Foto Kunjungan');
   if (idxArea === -1 || idxMerchant === -1) return { error: 'Header sheet tidak sesuai.' };
 
   for (var i = 1; i < data.length; i++) {
@@ -1483,6 +1518,12 @@ function updateLeakageFollowUp(p) {
           sheet.getRange(i + 1, idxKolom + 1).setValue(nilai);
         }
       });
+      // Foto CUMA ditimpa kalau ada foto baru (p.fotoUrl keisi dari doPost
+      // setelah upload berhasil) — edit field lain tanpa ganti foto TIDAK
+      // menghapus foto yang sudah tersimpan sebelumnya.
+      if (p.fotoUrl && idxFoto !== -1) {
+        sheet.getRange(i + 1, idxFoto + 1).setValue(p.fotoUrl);
+      }
       if (idxTgl !== -1) {
         sheet.getRange(i + 1, idxTgl + 1).setValue(
           Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
