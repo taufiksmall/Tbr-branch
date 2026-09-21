@@ -1565,6 +1565,25 @@ function exportLeakageExcelFile() {
     } catch (e) { /* kalau Drive API dibatasi domain, link tetap dibalikin — user tinggal login sendiri buat akses */ }
   }
 
+  // Tambah kolom "Status Follow Up" di akhir (Sudah/Belum) pakai aturan
+  // yang sama dengan halaman: Keterangan Leakage + Potensi Winback +
+  // Penawaran Prima semuanya terisi. Hanya di file export, sheet asli
+  // tidak diubah.
+  if (data.length > 0) {
+    var hdr = data[0];
+    var idxWajib = ['Keterangan Leakage', 'Potensi Winback', 'Penawaran Prima/Prima Xtra (Y/N)']
+      .map(function (h) { return hdr.indexOf(h); });
+    data = data.map(function (row, i) {
+      if (i === 0) return row.concat(['Status Follow Up']);
+      var lengkap = idxWajib.every(function (ix) {
+        if (ix === -1) return false;
+        var v = String(row[ix] === null || row[ix] === undefined ? '' : row[ix]).trim();
+        return v !== '' && v !== '-';
+      });
+      return row.concat([lengkap ? 'Sudah' : 'Belum']);
+    });
+  }
+
   var exportSheet = exportSs.getSheets()[0];
   exportSheet.clear();
   if (data.length > 0) {
