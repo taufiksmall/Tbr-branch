@@ -345,6 +345,7 @@
 
     <div class="modal-funnel-title">Status Funnel Lain (info, edit manual di Sheets)</div>
     <div class="funnel-row" id="modalFunnelRow"></div>
+    <div id="modalInfoTambahan"></div>
 
     <div class="modal-error" id="modalError">Gagal menyimpan. Coba lagi.</div>
 
@@ -543,6 +544,14 @@ function sudahBelumChip(label, nilai) {
   return '<span class="funnel-chip ' + (sudah ? 'sudah' : 'belum') + '">' + escHtml(label) + ': ' + (sudah ? 'Sudah' : 'Belum') + '</span>';
 }
 
+// Info tambahan read-only (Kategori Belum LVM / Visit Beta) — dropdown
+// deskriptif yang diisi manual admin di Google Sheets, cuma ditampilkan
+// di sini kalau ada isinya (bukan '-').
+function infoLineJikaAda(label, value) {
+  if (!value || value === '-') return '';
+  return '<div class="list-item-reason"><b>' + escHtml(label) + ':</b> ' + escHtml(value) + '</div>';
+}
+
 function render() {
   var keyword = (document.getElementById('searchBox') && document.getElementById('searchBox').value || '').toLowerCase().trim();
 
@@ -590,6 +599,7 @@ function render() {
       + sudahBelumChip('Visit Beta', m.sudahVisitBeta)
       + sudahBelumChip('Aktivasi', m.sudahAktivasi)
       + '</div>';
+    var infoTambahan = infoLineJikaAda('Kategori Belum LVM', m.kategoriBelumLVM) + infoLineJikaAda('Visit Beta', m.visitBeta);
     return '' +
       '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-no="' + escAttr(m.no) + '" data-cabang="' + escAttr(m.cabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '">' +
         '<div class="list-item-top">' +
@@ -600,6 +610,7 @@ function render() {
         reasonBaris +
         '<div class="list-item-tgl">Tanggal Visit: ' + escHtml(m.tanggalVisit) + '</div>' +
         funnelRow +
+        infoTambahan +
       '</div>';
   }).join('');
 }
@@ -628,6 +639,8 @@ function bukaModal(no, cabang, namaMerchant) {
     sudahBelumChip('Deal LF', data.sudahDeal) +
     sudahBelumChip('Visit Beta', data.sudahVisitBeta) +
     sudahBelumChip('Aktivasi', data.sudahAktivasi);
+  document.getElementById('modalInfoTambahan').innerHTML =
+    infoLineJikaAda('Kategori Belum LVM', data.kategoriBelumLVM) + infoLineJikaAda('Visit Beta', data.visitBeta);
   document.getElementById('modalError').classList.remove('show');
   document.getElementById('modalOverlay').classList.add('show');
 }

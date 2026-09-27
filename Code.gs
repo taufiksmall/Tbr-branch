@@ -40,6 +40,34 @@ var STATUS_LIVIN_MIGRASI_VALID = [
   'Merchant Tutup Sementara'
 ];
 
+// Kategori alasan kenapa merchant belum LVM — dropdown baku (BUKAN free
+// text seperti dikira sebelumnya). Read-only di tracker-livin-food.html:
+// ditampilkan sebagai info tambahan, tapi diisi/diupdate manual oleh admin
+// langsung di Google Sheets, bukan lewat modal halaman ini.
+var KATEGORI_REASON_BELUM_LVM_VALID = [
+  'Belum bertemu owner',
+  'Merchant Badan Usaha belum lengkap dokumen (akta berubah, NIB)',
+  'Belum memiliki HP android os 13 / Kendala teknis/sistem (no HP)',
+  'Kendala teknis lainnya (misal FR tidak kenali)',
+  'Lainnya'
+];
+
+// Pilihan dropdown kolom "Visit Beta (drop down)" — status upaya migrasi
+// merchant ke aplikasi beta Livin' Food. Sama seperti KATEGORI_REASON_BELUM_LVM_VALID
+// di atas: read-only di tracker-livin-food.html, diisi manual admin di Sheets.
+var VISIT_BETA_VALID = [
+  'Merchant belum visit',
+  'Tidak bisa bertemu owner',
+  'merchant tutup sementara',
+  'merchant memutuskan cancell',
+  'Sudah Klik Link Beta, namun muncul "App Not Available/account isnt eligible"',
+  'Sudah klik Link Beta namun tidak terjadi apa-apa',
+  'Sudah Klik Link Beta, namun muncul "App not installed"',
+  'Sudah Klik Link Beta, namun muncul "Device isnt compatible"',
+  'Merchant Request ganti email',
+  'Lainnya'
+];
+
 // Pilihan dropdown yang valid buat form follow up di monitoring-top100-leakage.html.
 var KETERANGAN_LEAKAGE_VALID = [
   '1. Rekening Operasional di Bank lain',
@@ -2835,8 +2863,12 @@ function getLivinMigrasiAll() {
   // menyamakan whitespace-nya dulu sebelum dibandingkan, jadi tetap ketemu.
   var idxReasonKendala = _idxHeaderFleksibel(headers, 'Reason Kendala (Free Text)');
   var idxSudahLVM    = _idxHeaderFleksibel(headers, 'Sudah LVM');
+  var idxKategoriBelumLVM = _idxHeaderFleksibel(headers, 'Kategori Reason Belum LVM');
   var idxSudahDeal   = _idxHeaderFleksibel(headers, 'Sudah Deal Livin Food');
   var idxSudahVisitBeta  = _idxHeaderFleksibel(headers, 'Sudah Visit Beta');
+  // "Visit Beta (drop down)" juga sering ditulis dengan line break di
+  // tengah ("Visit Beta\n(drop down)") — sama kasusnya kayak Reason Kendala.
+  var idxVisitBeta   = _idxHeaderFleksibel(headers, 'Visit Beta (drop down)');
   var idxSudahAktivasi   = _idxHeaderFleksibel(headers, 'Sudah Aktivasi Livin Food');
 
   var hasil = [];
@@ -2869,8 +2901,10 @@ function getLivinMigrasiAll() {
       hasilVisit    : STATUS_LIVIN_MIGRASI_VALID.indexOf(hasilVisitBaris) !== -1 ? hasilVisitBaris : '-',
       reasonKendala : idxReasonKendala !== -1 ? (String(data[i][idxReasonKendala] || '').trim() || '-') : '-',
       sudahLVM      : idxSudahLVM  !== -1 ? (String(data[i][idxSudahLVM]  || '').trim() || 'Belum') : 'Belum',
+      kategoriBelumLVM: idxKategoriBelumLVM !== -1 ? (String(data[i][idxKategoriBelumLVM] || '').trim() || '-') : '-',
       sudahDeal     : idxSudahDeal !== -1 ? (String(data[i][idxSudahDeal] || '').trim() || 'Belum') : 'Belum',
       sudahVisitBeta: idxSudahVisitBeta !== -1 ? (String(data[i][idxSudahVisitBeta] || '').trim() || 'Belum') : 'Belum',
+      visitBeta     : idxVisitBeta !== -1 ? (String(data[i][idxVisitBeta] || '').trim() || '-') : '-',
       sudahAktivasi : idxSudahAktivasi  !== -1 ? (String(data[i][idxSudahAktivasi]  || '').trim() || 'Belum') : 'Belum'
     });
   }
