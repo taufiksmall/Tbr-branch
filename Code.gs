@@ -238,25 +238,31 @@ function doGet(e) {
     }
   }
 
-  // ── UPDATE LIVIN MIGRASI STATUS: update "Hasil Visit" (+ Reason Kendala)
-  //    satu merchant, dipanggil dari tracker-livin-food.html saat admin
-  //    klik merchant lalu pilih hasil visit baru di modal. Otomatis ikut
-  //    menandai "Sudah Visit" = Sudah & "Tanggal Visit" = hari ini, karena
-  //    isi Hasil Visit cuma masuk akal kalau kunjungannya sudah terjadi ──
+  // ── UPDATE LIVIN MIGRASI STATUS: update "Hasil Visit" (+ Reason Kendala,
+  //    + opsional Kategori Reason Belum LVM & Visit Beta) satu merchant,
+  //    dipanggil dari tracker-livin-food.html saat admin klik merchant lalu
+  //    isi modal. Otomatis ikut menandai "Sudah Visit" = Sudah & "Tanggal
+  //    Visit" = hari ini, karena isi Hasil Visit cuma masuk akal kalau
+  //    kunjungannya sudah terjadi. Kalau "Visit Beta" ikut diisi dengan
+  //    nilai selain "Merchant belum visit", otomatis ikut menandai "Sudah
+  //    Visit Beta" = Sudah & "Tanggal Visit Beta" = hari ini juga — lihat
+  //    updateLivinMigrasiStatus() buat detail logikanya ─────────────────
   if (action === 'updateLivinMigrasiStatus') {
     try {
       var ssLivinUpd = SpreadsheetApp.getActiveSpreadsheet();
-      var noLivinUpd           = e.parameter.no           || '';
-      var cabangLivinUpd       = e.parameter.cabang        || '';
-      var namaMerchantLivinUpd = e.parameter.namaMerchant  || '';
-      var hasilVisitBaruUpd    = e.parameter.hasilVisit    || '';
-      var reasonKendalaUpd     = e.parameter.reasonKendala || '';
+      var noLivinUpd           = e.parameter.no              || '';
+      var cabangLivinUpd       = e.parameter.cabang           || '';
+      var namaMerchantLivinUpd = e.parameter.namaMerchant     || '';
+      var hasilVisitBaruUpd    = e.parameter.hasilVisit       || '';
+      var reasonKendalaUpd     = e.parameter.reasonKendala    || '';
+      var kategoriBelumLVMUpd  = e.parameter.kategoriBelumLVM || '';
+      var visitBetaUpd         = e.parameter.visitBeta        || '';
 
-      var berhasilLivinUpd = updateLivinMigrasiStatus(ssLivinUpd, noLivinUpd, cabangLivinUpd, namaMerchantLivinUpd, hasilVisitBaruUpd, reasonKendalaUpd);
-      if (berhasilLivinUpd) {
+      var berhasilLivinUpd = updateLivinMigrasiStatus(ssLivinUpd, noLivinUpd, cabangLivinUpd, namaMerchantLivinUpd, hasilVisitBaruUpd, reasonKendalaUpd, kategoriBelumLVMUpd, visitBetaUpd);
+      if (berhasilLivinUpd === true) {
         return jsonResponse({ success: true });
       } else {
-        return jsonResponse({ success: false, error: 'Merchant tidak ditemukan atau Hasil Visit tidak valid.' });
+        return jsonResponse({ success: false, error: typeof berhasilLivinUpd === 'string' ? berhasilLivinUpd : 'Merchant tidak ditemukan atau Hasil Visit tidak valid.' });
       }
     } catch (err) {
       return jsonResponse({ success: false, error: err.message });
@@ -2912,25 +2918,46 @@ function getLivinMigrasiAll() {
 }
 
 /**
- * Update "Hasil Visit" (+ "Reason Kendala (Free Text)") satu merchant di
- * sheet "Migrasi Livin' Food". Dipanggil dari action=updateLivinMigrasiStatus
- * (tracker-livin-food.html). Mencari baris yang cocok — PRIORITAS pakai
- * kolom "No" (ID unik baris paling diandalkan kalau diisi), fallback ke
- * Cabang + Nama Merchant kalau "No" kosong/tidak dikirim. Baris yang cocok
- * lalu ditimpa Hasil Visit, Reason Kendala (kalau diisi), "Sudah Visit"
- * otomatis ditandai "Sudah", & "Tanggal Visit (Updated terakhir)" hari ini
- * — soalnya isi Hasil Visit cuma masuk akal kalau kunjungannya sudah
- * terjadi. Field funnel lain (Sudah LVM/Deal/Visit Beta/Aktivasi) TIDAK
- * disentuh di sini — itu diisi manual admin di Google Sheets. Return true
- * kalau baris ditemukan & berhasil diupdate.
+ * Update satu merchant di sheet "Migrasi Livin' Food": Hasil Visit (wajib)
+ * + Reason Kendala, Kategori Reason Belum LVM, & Visit Beta (ketiganya
+ * OPSIONAL — cuma ditulis kalau dikirim). Dipanggil dari
+ * action=updateLivinMigrasiStatus (tracker-livin-food.html). Mencari baris
+ * yang cocok — PRIORITAS pakai kolom "No" (ID unik baris paling diandalkan
+ * kalau diisi), fallback ke Cabang + Nama Merchant kalau "No" kosong/tidak
+ * dikirim.
+ *
+ * Efek samping otomatis:
+ *   - "Sudah Visit" ditandai "Sudah" & "Tanggal Visit (Updated terakhir)"
+ *     diisi hari ini — soalnya isi Hasil Visit cuma masuk akal kalau
+ *     kunjungannya sudah terjadi.
+ *   - Kalau "Visit Beta" ikut dikirim DAN nilainya BUKAN "Merchant belum
+ *     visit" (nilai itu artinya justru belum visit — jangan sampai malah
+ *     ditandai "Sudah"), "Sudah Visit Beta" ditandai "Sudah" & "Tanggal
+ *     Visit Beta (Updated terakhir)" diisi hari ini juga.
+ *   - "Kategori Reason Belum LVM" TIDAK memicu efek samping apapun (cuma
+ *     mencatat alasan, tidak mengubah status "Sudah LVM").
+ *
+ * Field funnel lain (Sudah LVM/Deal/Aktivasi) TIDAK disentuh di sini — itu
+ * diisi manual admin di Google Sheets. Return TRUE kalau berhasil, atau
+ * STRING pesan error kalau salah satu nilai yang dikirim tidak valid /
+ * baris tidak ketemu (biar pesan errornya spesifik ke frontend), FALSE
+ * kalau sheet-nya sendiri tidak ada.
  */
-function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, reasonKendala) {
+function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, reasonKendala, kategoriBelumLVM, visitBeta) {
   var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
   if (!sheet) return false;
 
   if (STATUS_LIVIN_MIGRASI_VALID.indexOf(hasilVisitBaru) === -1) {
     Logger.log('Hasil Visit migrasi Livin Food tidak valid: ' + hasilVisitBaru);
-    return false;
+    return 'Hasil Visit tidak valid.';
+  }
+  var kategoriBelumLVMTrim = String(kategoriBelumLVM || '').trim();
+  if (kategoriBelumLVMTrim && KATEGORI_REASON_BELUM_LVM_VALID.indexOf(kategoriBelumLVMTrim) === -1) {
+    return 'Kategori Reason Belum LVM tidak valid.';
+  }
+  var visitBetaTrim = String(visitBeta || '').trim();
+  if (visitBetaTrim && VISIT_BETA_VALID.indexOf(visitBetaTrim) === -1) {
+    return 'Visit Beta tidak valid.';
   }
 
   var lastRow = sheet.getLastRow();
@@ -2945,6 +2972,10 @@ function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, 
   var idxTglVisit   = _idxHeaderFleksibel(headers, 'Tanggal Visit (Updated terakhir)');
   var idxHasilVisit = _idxHeaderFleksibel(headers, 'Hasil Visit');
   var idxReasonKendala = _idxHeaderFleksibel(headers, 'Reason Kendala (Free Text)');
+  var idxKategoriBelumLVM = _idxHeaderFleksibel(headers, 'Kategori Reason Belum LVM');
+  var idxSudahVisitBeta = _idxHeaderFleksibel(headers, 'Sudah Visit Beta');
+  var idxTglVisitBeta   = _idxHeaderFleksibel(headers, 'Tanggal Visit Beta (Updated terakhir)');
+  var idxVisitBeta      = _idxHeaderFleksibel(headers, 'Visit Beta (drop down)');
   if (idxMerchant === -1 || idxHasilVisit === -1) return false;
 
   var kolomNo       = idxNo !== -1 ? sheet.getRange(2, idxNo + 1, lastRow - 1, 1).getValues() : null;
@@ -2977,9 +3008,29 @@ function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, 
         Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
       );
     }
+
+    if (idxKategoriBelumLVM !== -1 && kategoriBelumLVMTrim) {
+      sheet.getRange(row, idxKategoriBelumLVM + 1).setValue(kategoriBelumLVMTrim);
+    }
+
+    if (idxVisitBeta !== -1 && visitBetaTrim) {
+      sheet.getRange(row, idxVisitBeta + 1).setValue(visitBetaTrim);
+      // "Merchant belum visit" artinya beta-nya JUSTRU belum dikunjungi —
+      // jangan ditandai "Sudah" buat nilai itu, cuma buat 9 nilai lainnya
+      // yang semuanya menandakan interaksi/kunjungan beta beneran terjadi.
+      if (visitBetaTrim !== 'Merchant belum visit') {
+        if (idxSudahVisitBeta !== -1) sheet.getRange(row, idxSudahVisitBeta + 1).setValue('Sudah');
+        if (idxTglVisitBeta !== -1) {
+          sheet.getRange(row, idxTglVisitBeta + 1).setValue(
+            Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
+          );
+        }
+      }
+    }
+
     return true;
   }
-  return false;
+  return 'Merchant tidak ditemukan.';
 }
 
 /**

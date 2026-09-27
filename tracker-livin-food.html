@@ -341,11 +341,16 @@
     <select id="modalHasilVisit" class="select-input"></select>
 
     <label class="field-label">Reason Kendala (opsional)</label>
-    <textarea id="modalReasonKendala" class="search-input" placeholder="Kendala/keterangan hasil kunjungan (opsional)" style="margin-bottom:0;min-height:70px;resize:vertical;"></textarea>
+    <textarea id="modalReasonKendala" class="search-input" placeholder="Kendala/keterangan hasil kunjungan (opsional)" style="margin-bottom:12px;min-height:70px;resize:vertical;"></textarea>
+
+    <label class="field-label">Kategori Reason Belum LVM (opsional)</label>
+    <select id="modalKategoriBelumLVM" class="select-input"></select>
+
+    <label class="field-label">Visit Beta (opsional)</label>
+    <select id="modalVisitBeta" class="select-input"></select>
 
     <div class="modal-funnel-title">Status Funnel Lain (info, edit manual di Sheets)</div>
     <div class="funnel-row" id="modalFunnelRow"></div>
-    <div id="modalInfoTambahan"></div>
 
     <div class="modal-error" id="modalError">Gagal menyimpan. Coba lagi.</div>
 
@@ -381,6 +386,29 @@ var HASIL_VISIT_CLASS = {
   'Merchant Tutup Sementara': 'tutup'
 };
 
+// Sama persis dengan KATEGORI_REASON_BELUM_LVM_VALID & VISIT_BETA_VALID
+// di Code.gs — dua dropdown opsional di modal, TIDAK memicu badge/stat
+// (beda dari Hasil Visit), cuma dicatat apa adanya di sheet.
+var KATEGORI_BELUM_LVM_VALID = [
+  'Belum bertemu owner',
+  'Merchant Badan Usaha belum lengkap dokumen (akta berubah, NIB)',
+  'Belum memiliki HP android os 13 / Kendala teknis/sistem (no HP)',
+  'Kendala teknis lainnya (misal FR tidak kenali)',
+  'Lainnya'
+];
+var VISIT_BETA_VALID = [
+  'Merchant belum visit',
+  'Tidak bisa bertemu owner',
+  'merchant tutup sementara',
+  'merchant memutuskan cancell',
+  'Sudah Klik Link Beta, namun muncul "App Not Available/account isnt eligible"',
+  'Sudah klik Link Beta namun tidak terjadi apa-apa',
+  'Sudah Klik Link Beta, namun muncul "App not installed"',
+  'Sudah Klik Link Beta, namun muncul "Device isnt compatible"',
+  'Merchant Request ganti email',
+  'Lainnya'
+];
+
 var DATA_ALL = [];
 var AREA_FILTER = '';
 var STATUS_FILTER = '';
@@ -394,6 +422,8 @@ window.onload = function() {
   bangunStatsBoxes();
   bangunFilterTabs();
   isiSelectHasilVisit();
+  isiSelectOpsional('modalKategoriBelumLVM', KATEGORI_BELUM_LVM_VALID, '— Tidak diubah —');
+  isiSelectOpsional('modalVisitBeta', VISIT_BETA_VALID, '— Tidak diubah —');
   cekMaintenanceLaluMuat();
 };
 
@@ -432,6 +462,17 @@ function isiSelectHasilVisit() {
   sel.innerHTML = HASIL_VISIT_VALID.map(function(s) {
     return '<option value="' + escAttr(s) + '">' + escHtml(s) + '</option>';
   }).join('');
+}
+
+// Buat dropdown OPSIONAL (Kategori Reason Belum LVM / Visit Beta) — selalu
+// ada pilihan kosong di awal (value="") biar admin bisa biarkan tidak
+// diubah kalau memang bukan itu yang mau diupdate hari ini.
+function isiSelectOpsional(idElemen, daftarNilai, labelKosong) {
+  var sel = document.getElementById(idElemen);
+  sel.innerHTML = '<option value="">' + escHtml(labelKosong) + '</option>' +
+    daftarNilai.map(function(s) {
+      return '<option value="' + escAttr(s) + '">' + escHtml(s) + '</option>';
+    }).join('');
 }
 
 // Cek dulu status maintenance (request ringan) sebelum muatData yang berat.
@@ -634,13 +675,18 @@ function bukaModal(no, cabang, namaMerchant) {
   document.getElementById('modalCabang').textContent = data.cabang + ' · ' + data.area;
   document.getElementById('modalReasonKendala').value = data.reasonKendala && data.reasonKendala !== '-' ? data.reasonKendala : '';
   document.getElementById('modalHasilVisit').value = HASIL_VISIT_VALID.indexOf(data.hasilVisit) !== -1 ? data.hasilVisit : HASIL_VISIT_VALID[0];
+  // Dua dropdown opsional ini default ke "— Tidak diubah —" (value kosong)
+  // KECUALI merchant-nya udah punya nilai valid sebelumnya — biar admin
+  // lihat pilihan yang sudah ada, bukan seolah-olah belum pernah diisi.
+  document.getElementById('modalKategoriBelumLVM').value =
+    KATEGORI_BELUM_LVM_VALID.indexOf(data.kategoriBelumLVM) !== -1 ? data.kategoriBelumLVM : '';
+  document.getElementById('modalVisitBeta').value =
+    VISIT_BETA_VALID.indexOf(data.visitBeta) !== -1 ? data.visitBeta : '';
   document.getElementById('modalFunnelRow').innerHTML =
     sudahBelumChip('LVM', data.sudahLVM) +
     sudahBelumChip('Deal LF', data.sudahDeal) +
     sudahBelumChip('Visit Beta', data.sudahVisitBeta) +
     sudahBelumChip('Aktivasi', data.sudahAktivasi);
-  document.getElementById('modalInfoTambahan').innerHTML =
-    infoLineJikaAda('Kategori Belum LVM', data.kategoriBelumLVM) + infoLineJikaAda('Visit Beta', data.visitBeta);
   document.getElementById('modalError').classList.remove('show');
   document.getElementById('modalOverlay').classList.add('show');
 }
@@ -654,6 +700,8 @@ function simpanStatus() {
   if (!MODAL_TARGET) return;
   var hasilVisitBaru = document.getElementById('modalHasilVisit').value;
   var reasonValue = document.getElementById('modalReasonKendala').value.trim();
+  var kategoriBelumLVMValue = document.getElementById('modalKategoriBelumLVM').value;
+  var visitBetaValue = document.getElementById('modalVisitBeta').value;
   var errBox = document.getElementById('modalError');
   errBox.classList.remove('show');
 
@@ -661,24 +709,26 @@ function simpanStatus() {
   document.getElementById('modalSave').textContent = 'Menyimpan...';
 
   var params = new URLSearchParams({
-    action        : 'updateLivinMigrasiStatus',
-    no            : MODAL_TARGET.no || '',
-    cabang        : MODAL_TARGET.cabang || '',
-    namaMerchant  : MODAL_TARGET.namaMerchant,
-    hasilVisit    : hasilVisitBaru,
-    reasonKendala : reasonValue
+    action           : 'updateLivinMigrasiStatus',
+    no               : MODAL_TARGET.no || '',
+    cabang           : MODAL_TARGET.cabang || '',
+    namaMerchant     : MODAL_TARGET.namaMerchant,
+    hasilVisit       : hasilVisitBaru,
+    reasonKendala    : reasonValue,
+    kategoriBelumLVM : kategoriBelumLVMValue,
+    visitBeta        : visitBetaValue
   });
 
   // Target disalin ke variabel lokal (bukan baca MODAL_TARGET lagi pas
   // request selesai) — soalnya kalau user tutup modal sebelum retry
   // selesai, MODAL_TARGET sudah di-null-kan oleh tutupModal().
-  kirimUpdateStatus(params, MODAL_TARGET, hasilVisitBaru, reasonValue, 3);
+  kirimUpdateStatus(params, MODAL_TARGET, hasilVisitBaru, reasonValue, kategoriBelumLVMValue, visitBetaValue, 3);
 }
 
 // Update status aman diulang otomatis (nimpa baris yang sama di sheet,
 // tidak bikin data dobel). Coba ulang beberapa kali dulu sebelum benar-benar
 // nampilin error ke user, sama seperti pola retry di muatData().
-function kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPercobaan) {
+function kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, kategoriBelumLVMValue, visitBetaValue, sisaPercobaan) {
   var btn = document.getElementById('modalSave');
   var errBox = document.getElementById('modalError');
 
@@ -712,6 +762,15 @@ function kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPerc
         if (reasonValue) m.reasonKendala = reasonValue;
         m.sudahVisit = 'Sudah';
         m.tanggalVisit = 'Baru saja';
+        if (kategoriBelumLVMValue) m.kategoriBelumLVM = kategoriBelumLVMValue;
+        if (visitBetaValue) {
+          m.visitBeta = visitBetaValue;
+          // Samain dengan efek samping di updateLivinMigrasiStatus() (Code.gs):
+          // "Merchant belum visit" TIDAK menandai Sudah Visit Beta jadi "Sudah".
+          if (visitBetaValue !== 'Merchant belum visit') {
+            m.sudahVisitBeta = 'Sudah';
+          }
+        }
       });
       tutupModal();
       render();
@@ -721,7 +780,7 @@ function kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPerc
       if (sisaPercobaan > 1) {
         btn.textContent = 'Server sibuk, mencoba lagi...';
         setTimeout(function() {
-          kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPercobaan - 1);
+          kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, kategoriBelumLVMValue, visitBetaValue, sisaPercobaan - 1);
         }, 2000);
         return;
       }
