@@ -76,15 +76,10 @@
     .stat-number { font-size: 20px; font-weight: 800; line-height: 1; color: #fff; }
     .stat-box.highlight .stat-number { color: #8faaf5; }
     .stat-box.belum .stat-number       { color: rgba(255,255,255,.55); }
-    .stat-box.penawaran .stat-number   { color: #fbbf24; }
-    .stat-box.penawaranlf .stat-number { color: #fb923c; }
-    .stat-box.berminat .stat-number    { color: #5eead4; }
-    .stat-box.reschedule .stat-number  { color: #f87171; }
-    .stat-box.setup .stat-number       { color: #38bdf8; }
-    .stat-box.setupwl .stat-number     { color: #818cf8; }
-    .stat-box.aktivasi .stat-number    { color: #a78bfa; }
-    .stat-box.onboard .stat-number     { color: #f472b6; }
-    .stat-box.live .stat-number        { color: #5ee08a; }
+    .stat-box.berminat .stat-number    { color: #5ee08a; }
+    .stat-box.menolak .stat-number     { color: #f87171; }
+    .stat-box.noowner .stat-number     { color: #fbbf24; }
+    .stat-box.tutup .stat-number       { color: #fb923c; }
     .stat-label { font-size: 9.5px; color: rgba(255,255,255,.65); font-weight: 600; margin-top: 5px; line-height: 1.3; }
 
     .field-label { display: block; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.7); margin-bottom: 7px; }
@@ -153,15 +148,10 @@
       border-radius: 999px; white-space: nowrap; flex-shrink: 0;
     }
     .badge-belum       { background: rgba(255,255,255,.06); color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.18); }
-    .badge-penawaran   { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
-    .badge-penawaranlf { background: rgba(251,146,60,.16); color: #fb923c; border: 1px solid rgba(251,146,60,.4); }
-    .badge-berminat    { background: rgba(45,212,191,.16); color: #5eead4; border: 1px solid rgba(45,212,191,.4); }
-    .badge-reschedule  { background: rgba(248,113,113,.16); color: #f87171; border: 1px solid rgba(248,113,113,.4); }
-    .badge-setup       { background: rgba(56,189,248,.16); color: #38bdf8; border: 1px solid rgba(56,189,248,.4); }
-    .badge-setupwl     { background: rgba(129,140,248,.16); color: #818cf8; border: 1px solid rgba(129,140,248,.4); }
-    .badge-aktivasi    { background: rgba(167,139,250,.16); color: #a78bfa; border: 1px solid rgba(167,139,250,.4); }
-    .badge-onboard     { background: rgba(244,114,182,.16); color: #f472b6; border: 1px solid rgba(244,114,182,.4); }
-    .badge-live        { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+    .badge-berminat    { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+    .badge-menolak     { background: rgba(248,113,113,.16); color: #f87171; border: 1px solid rgba(248,113,113,.4); }
+    .badge-noowner     { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
+    .badge-tutup       { background: rgba(251,146,60,.16); color: #fb923c; border: 1px solid rgba(251,146,60,.4); }
 
     /* Indikator progress funnel (Sudah LVM / Deal LF / Visit Beta / Aktivasi)
        — read-only, cuma diisi/diubah manual admin di Google Sheets, bukan
@@ -374,31 +364,20 @@
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
 // ================================================================
 
-// Sama persis dengan STATUS_LIVIN_MIGRASI_VALID di Code.gs — urutan funnel
-// Penawaran → Set Up → Aktivasi → Live.
+// Sama persis dengan STATUS_LIVIN_MIGRASI_VALID di Code.gs.
 var HASIL_VISIT_VALID = [
-  'Penawaran',
-  "Penawaran Livin' Food",
-  'Penawaran Merchant Berminat',
-  'Jadwal Ulang Owner tidak di lokasi',
-  'Set Up Katalog',
-  'Set Up Katalog & isi form whitelist beta',
-  'Aktivasi Beta LVM',
-  'Onboard LVM',
-  'Live'
+  'Berminat',
+  'Menolak',
+  'Belum bertemu owner',
+  'Merchant Tutup Sementara'
 ];
 
 // Kelas CSS (suffix) per nilai Hasil Visit, dipakai buat badge/stat/filter tab.
 var HASIL_VISIT_CLASS = {
-  'Penawaran'                                : 'penawaran',
-  "Penawaran Livin' Food"                    : 'penawaranlf',
-  'Penawaran Merchant Berminat'               : 'berminat',
-  'Jadwal Ulang Owner tidak di lokasi'        : 'reschedule',
-  'Set Up Katalog'                            : 'setup',
-  'Set Up Katalog & isi form whitelist beta'  : 'setupwl',
-  'Aktivasi Beta LVM'                         : 'aktivasi',
-  'Onboard LVM'                               : 'onboard',
-  'Live'                                      : 'live'
+  'Berminat'                : 'berminat',
+  'Menolak'                 : 'menolak',
+  'Belum bertemu owner'     : 'noowner',
+  'Merchant Tutup Sementara': 'tutup'
 };
 
 var DATA_ALL = [];
@@ -422,15 +401,10 @@ window.onload = function() {
 function bangunStatsBoxes() {
   var wrap = document.getElementById('statsRow');
   var labelSingkat = {
-    'Penawaran': 'Penawaran',
-    "Penawaran Livin' Food": 'Penawaran LF',
-    'Penawaran Merchant Berminat': 'Berminat',
-    'Jadwal Ulang Owner tidak di lokasi': 'Jadwal Ulang',
-    'Set Up Katalog': 'Set Up Katalog',
-    'Set Up Katalog & isi form whitelist beta': 'Set Up + WL Beta',
-    'Aktivasi Beta LVM': 'Aktivasi Beta',
-    'Onboard LVM': 'Onboard LVM',
-    'Live': 'Live'
+    'Berminat': 'Berminat',
+    'Menolak': 'Menolak',
+    'Belum bertemu owner': 'Belum Bertemu Owner',
+    'Merchant Tutup Sementara': 'Tutup Sementara'
   };
   var html = '';
   HASIL_VISIT_VALID.forEach(function(status) {

@@ -24,22 +24,20 @@ var CONFIG = {
   NAMA_SHEET_LIVIN_MIGRASI: "Migrasi Livin' Food"  // Nama tab tracker progress migrasi merchant ke Livin' Food
 };
 
-// Tahapan status progress migrasi merchant ke Livin' Food yang valid —
-// dipakai di tracker-livin-food.html (beda dari STATUS_EDC_LVM_VALID yang
-// dipakai pipeline.html buat konversi EDC ke LVM). Urutan disusun sebagai
-// funnel Penawaran → Set Up → Aktivasi → Live; "Jadwal Ulang Owner tidak
-// di lokasi" adalah status pengecualian (kunjungan gagal, perlu dijadwal
-// ulang) yang bisa kejadian di percobaan kunjungan awal mana pun.
+// Pilihan "Hasil Visit" yang valid — dipakai di tracker-livin-food.html
+// (beda dari STATUS_EDC_LVM_VALID yang dipakai pipeline.html buat konversi
+// EDC ke LVM). CATATAN: sebelumnya daftar ini sempat berisi 9 nilai versi
+// funnel (Penawaran → Set Up Katalog → ... → Live) — sudah DIGANTI TOTAL
+// ke 4 nilai ini atas konfirmasi user. Baris sheet yang masih berisi nilai
+// LAMA (mis. "Set Up Katalog & isi form whitelist beta") TIDAK diubah/
+// dihapus otomatis — teks aslinya tetap ada di sel Google Sheets, cuma
+// getLivinMigrasiAll() bakal balikin '-' (Belum Visit) buat baris begitu
+// sampai admin pilih ulang salah satu dari 4 nilai baru ini secara manual.
 var STATUS_LIVIN_MIGRASI_VALID = [
-  'Penawaran',
-  "Penawaran Livin' Food",
-  'Penawaran Merchant Berminat',
-  'Jadwal Ulang Owner tidak di lokasi',
-  'Set Up Katalog',
-  'Set Up Katalog & isi form whitelist beta',
-  'Aktivasi Beta LVM',
-  'Onboard LVM',
-  'Live'
+  'Berminat',
+  'Menolak',
+  'Belum bertemu owner',
+  'Merchant Tutup Sementara'
 ];
 
 // Pilihan dropdown yang valid buat form follow up di monitoring-top100-leakage.html.
