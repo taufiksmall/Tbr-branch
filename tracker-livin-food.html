@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tracker Livin' Food — TBRX Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Segoe UI', Tahoma, sans-serif;
+      background: radial-gradient(1100px 620px at 50% 4%, #202f5e 0%, #131c3f 38%, #0a0f24 70%, #05070f 100%);
+      color: #fff;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; flex-wrap: wrap; }
+    .topbar-nav-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-mark { height: 42px; width: auto; display: block; flex-shrink: 0; }
+    .topbar-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 18px; color: #fff; line-height: 1.1; }
+    .topbar-sub { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.65); margin-top: 2px; }
+    .topbar-nav {
+      font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.75);
+      text-decoration: none; padding: 8px 16px; border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px; transition: background .2s, color .2s, border-color .2s;
+      white-space: nowrap;
+    }
+    .topbar-nav:hover { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.3); }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 8px 16px 44px; position: relative; z-index: 1; }
+
+    .page-head { text-align: center; margin: 28px 0 24px; }
+    .breadcrumb { font-size: 12px; font-weight: 600; letter-spacing: .3px; color: rgba(255,255,255,.6); margin-bottom: 10px; text-decoration: none; display: inline-block; }
+    .breadcrumb:hover { color: rgba(255,255,255,.85); }
+    .page-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: 28px; letter-spacing: -.3px; color: #fff; margin-bottom: 8px; }
+    .page-subtitle { font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,.65); }
+
+    .card {
+      position: relative;
+      background: rgba(255,255,255,.035);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 20px;
+      padding: 24px;
+      margin-top: 16px;
+      box-shadow: 0 20px 50px -24px rgba(0,0,0,.6);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 10px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 14px 6px;
+      text-align: center;
+    }
+    .stat-box.highlight { background: rgba(47,95,224,.12); border-color: rgba(47,95,224,.4); }
+    .stat-number { font-size: 24px; font-weight: 800; line-height: 1; color: #fff; }
+    .stat-box.highlight .stat-number { color: #8faaf5; }
+    .stat-box.visit .stat-number { color: #fbbf24; }
+    .stat-box.progress .stat-number { color: #2dd4bf; }
+    .stat-box.live .stat-number { color: #5ee08a; }
+    .stat-label { font-size: 10.5px; color: rgba(255,255,255,.65); font-weight: 600; margin-top: 5px; line-height: 1.3; }
+
+    .field-label { display: block; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.7); margin-bottom: 7px; }
+
+    .search-input, select.select-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: inherit;
+      font-weight: 500;
+      color: #fff;
+      background: rgba(255,255,255,.05);
+      outline: none;
+      margin-bottom: 12px;
+    }
+    select.select-input {
+      appearance: none; -webkit-appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-opacity='0.55' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat; background-position: right 14px center;
+      padding-right: 38px;
+    }
+    select.select-input option { color: #1f2a44; }
+    .search-input::placeholder { color: rgba(255,255,255,.35); }
+    .search-input:focus, select.select-input:focus { border-color: rgba(255,255,255,.35); background-color: rgba(255,255,255,.08); }
+
+    .filter-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-tab {
+      display: inline-flex;
+      align-items: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.75);
+      font-size: 12.5px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .filter-tab.active { background: rgba(47,95,224,.22); border-color: rgba(47,95,224,.5); color: #fff; }
+
+    .list-item {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 13px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+    }
+    .list-item:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+    .list-item:focus-visible { outline: none; border-color: rgba(68,114,239,.7); box-shadow: 0 0 0 3px rgba(47,95,224,.3); }
+    .list-item:last-child { margin-bottom: 0; }
+    .list-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .list-item-nama { font-size: 14.5px; font-weight: 700; color: #fff; }
+    .list-item-info { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 4px; }
+    .list-item-alamat { font-size: 11.5px; color: rgba(255,255,255,.55); margin-top: 3px; }
+    .list-item-tgl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 6px; }
+
+    .badge {
+      font-size: 11px; font-weight: 700; padding: 4px 11px;
+      border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-visit    { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
+    .badge-progress { background: rgba(45,212,191,.16); color: #5eead4; border: 1px solid rgba(45,212,191,.4); }
+    .badge-live     { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+
+    .empty { text-align: center; padding: 24px; color: rgba(255,255,255,.5); font-size: 13.5px; }
+
+    #loadingState { text-align: center; padding: 60px 20px; color: rgba(255,255,255,.7); position: relative; z-index: 1; }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid rgba(255,255,255,.15);
+      border-top-color: #4472ef;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .footer { text-align: center; padding: 40px 16px 4px; font-size: 12px; font-weight: 500; color: rgba(255,255,255,.55); }
+
+    .back-link {
+      display: inline-block; margin-top: 4px;
+      font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,.75);
+      text-decoration: underline;
+    }
+
+    /* Modal update status */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(4,6,14,.7);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-panel {
+      width: 100%; max-width: 400px;
+      background: #101833;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 30px 70px -20px rgba(0,0,0,.7);
+    }
+    .modal-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 19px; color: #fff; margin-bottom: 4px; }
+    .modal-sub { font-size: 12.5px; color: rgba(255,255,255,.65); margin-bottom: 20px; }
+    .modal-error { font-size: 12.5px; color: #fca5a5; margin-top: 10px; display: none; }
+    .modal-error.show { display: block; }
+    .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 22px; }
+    .modal-cancel {
+      font-size: 13.5px; font-weight: 700; color: rgba(255,255,255,.75);
+      background: none; border: none; cursor: pointer; font-family: inherit;
+    }
+    .modal-cancel:hover { color: #fff; }
+    .modal-save {
+      padding: 11px 22px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, #4472ef, #2b4fd6);
+      color: #fff; font-size: 13.5px; font-weight: 700; font-family: inherit;
+      cursor: pointer; box-shadow: 0 12px 26px -12px rgba(43,79,214,.7);
+    }
+    .modal-save:disabled { opacity: .6; cursor: not-allowed; }
+
+    #toast {
+      position: fixed;
+      bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(10,14,30,.92);
+      border: 1px solid rgba(255,255,255,.14);
+      color: white;
+      padding: 11px 22px; border-radius: 24px;
+      font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      transition: transform 0.3s; z-index: 1000;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="topbar-brand" href="index.html" style="text-decoration:none;">
+    <img src="assets/tbr-logo-white.png" alt="TBRX" class="topbar-mark">
+    <div>
+      <div class="topbar-title">TBRX Report</div>
+      <div class="topbar-sub">Region X · Sulawesi &amp; Maluku</div>
+    </div>
+  </a>
+  <div class="topbar-nav-group">
+    <a class="topbar-nav" href="index.html">Menu</a>
+    <a class="topbar-nav" href="akuisisi-harian.html">Lanjutkan Laporan →</a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="page-head">
+    <a class="breadcrumb" href="index.html">← Menu</a>
+    <h1 class="page-title">Tracker Livin' Food</h1>
+    <div class="page-subtitle" id="headerSubtitle">Memuat data...</div>
+  </div>
+
+  <div id="loadingState">
+    <div class="spinner"></div>
+    <div id="loadingMsg">Memuat data tracker...</div>
+  </div>
+
+  <div id="kontenTracker" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">Ringkasan Progress Migrasi</div>
+      <div class="stats-row">
+        <div class="stat-box highlight">
+          <div class="stat-number" id="statTotal">0</div>
+          <div class="stat-label">Total Merchant</div>
+        </div>
+        <div class="stat-box visit">
+          <div class="stat-number" id="statVisit">0</div>
+          <div class="stat-label">Visit</div>
+        </div>
+        <div class="stat-box progress">
+          <div class="stat-number" id="statProgress">0</div>
+          <div class="stat-label">On Progress</div>
+        </div>
+        <div class="stat-box live">
+          <div class="stat-number" id="statLive">0</div>
+          <div class="stat-label">Live</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Filter</div>
+      <div>
+        <label class="field-label">Area</label>
+        <select id="selectArea" class="select-input">
+          <option value="">Semua Area</option>
+        </select>
+      </div>
+      <input type="text" id="searchBox" class="search-input" placeholder="Cari nama merchant / cabang...">
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" data-status="">Semua</button>
+        <button class="filter-tab" data-status="Visit">Visit</button>
+        <button class="filter-tab" data-status="On Progress">On Progress</button>
+        <button class="filter-tab" data-status="Live">Live</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daftar Merchant</div>
+      <p style="font-size:12px;color:rgba(255,255,255,.6);margin:-10px 0 14px;">Klik salah satu merchant untuk update progress migrasi.</p>
+      <div id="listTracker"></div>
+    </div>
+
+  </div>
+
+  <div id="emptyState" style="display:none;">
+    <div class="page-head" style="margin-top:40px;">
+      <div style="font-size:44px;margin-bottom:16px;">🍽️</div>
+      <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin-bottom:8px;color:#fff;">Belum Ada Data Merchant</h2>
+      <p style="color:rgba(255,255,255,.55);font-size:13.5px;">Sheet "Migrasi Livin' Food" masih kosong. Import/isi dulu data master merchant target migrasi di Google Sheets, lalu refresh halaman ini.</p>
+    </div>
+  </div>
+
+  <div id="errorState" style="display:none;">
+    <div class="page-head" style="margin-top:60px;">
+      <div style="margin-bottom:16px;"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;margin-bottom:8px;color:#fff;">Gagal Memuat Data</h2>
+      <p style="color:rgba(255,255,255,.55);font-size:13.5px;margin-bottom:20px;" id="errorMsg">Terjadi kesalahan saat mengambil data tracker.</p>
+      <a href="index.html" class="back-link">← Menu</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    Tracker Migrasi Livin' Food<br>
+    <span>Copyright &copy; 2026 TBRX Team</span>
+  </div>
+</div>
+
+<!-- Modal update status -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-panel">
+    <div class="modal-title" id="modalMerchant">-</div>
+    <div class="modal-sub" id="modalCabang">-</div>
+    <div class="modal-sub" id="modalAlamat" style="margin-top:-14px;"></div>
+
+    <label class="field-label">Status Progress</label>
+    <select id="modalStatus" class="select-input">
+      <option value="Visit">Visit</option>
+      <option value="On Progress">On Progress</option>
+      <option value="Live">Live</option>
+    </select>
+
+    <label class="field-label">Catatan</label>
+    <textarea id="modalCatatan" class="search-input" placeholder="Catatan follow up (opsional)" style="margin-bottom:0;min-height:70px;resize:vertical;"></textarea>
+
+    <div class="modal-error" id="modalError">Gagal menyimpan. Coba lagi.</div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" id="modalCancel" type="button">Batal</button>
+      <button class="modal-save" id="modalSave" type="button">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Status berhasil diperbarui!</div>
+
+<script>
+// ================================================================
+// ⚙️ Samain dengan URL Apps Script di halaman lain (index.html dll).
+// ================================================================
+var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
+// ================================================================
+
+var DATA_ALL = [];
+var AREA_FILTER = '';
+var STATUS_FILTER = '';
+var MODAL_TARGET = null; // { kodeCabang, namaMerchant, namaCabang, alamat } sedang diedit
+
+function formatAngka(n) {
+  return Number(n || 0).toLocaleString('id-ID');
+}
+
+window.onload = function() {
+  cekMaintenanceLaluMuat();
+};
+
+// Cek dulu status maintenance (request ringan) sebelum muatData yang berat.
+// Kalau gagal ngecek (network hiccup dll), tetep lanjut normal — jangan
+// sampai user ke-block gara-gara cekMaintenance doang yang gagal.
+function cekMaintenanceLaluMuat() {
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=cekMaintenance'), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res = JSON.parse(teks);
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      muatData(3);
+    })
+    .catch(function() { muatData(3); });
+}
+
+// Tambahin parameter waktu unik + { cache: 'no-store' } supaya browser/proxy
+// nggak nyimpen hasil GET lama (sama seperti halaman monitoring lain —
+// tanpa ini, status yang baru diupdate bisa kelihatan "belum berubah" pas
+// refresh gara-gara kena cache, bukan datanya yang salah).
+function _urlNoCache(url) {
+  var sep = url.indexOf('?') === -1 ? '?' : '&';
+  return url + sep + '_ts=' + Date.now();
+}
+
+function muatData(sisaPercobaan) {
+  fetch(_urlNoCache(APPS_SCRIPT_URL + '?action=getLivinMigrasiAll'), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res;
+      try { res = JSON.parse(teks); }
+      catch (e) { throw new Error('respons bukan JSON (server sedang sibuk)'); }
+      if (res.maintenance) { window.location.href = 'maintenance.html'; return; }
+      if (res.error) { tampilkanError(res.error); return; }
+      DATA_ALL = res.data || [];
+      if (!DATA_ALL.length) { tampilkanKosong(); return; }
+      tampilkanData();
+    })
+    .catch(function(err) {
+      if (sisaPercobaan > 1) {
+        var msg = document.getElementById('loadingMsg');
+        if (msg) msg.textContent = 'Server sedang sibuk, mencoba lagi...';
+        setTimeout(function() { muatData(sisaPercobaan - 1); }, 2000);
+        return;
+      }
+      tampilkanError('Gagal memuat data setelah beberapa percobaan: ' + err.message + '. Coba muat ulang halaman.');
+    });
+}
+
+function tampilkanData() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('kontenTracker').style.display = 'block';
+  document.getElementById('headerSubtitle').textContent = 'Semua Cabang · Region X (Sulawesi & Maluku)';
+
+  isiFilterArea();
+  render();
+
+  document.getElementById('searchBox').addEventListener('input', render);
+  document.querySelectorAll('.filter-tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      STATUS_FILTER = btn.dataset.status;
+      render();
+    });
+  });
+  document.getElementById('selectArea').addEventListener('change', function() {
+    AREA_FILTER = this.value;
+    render();
+  });
+
+  document.getElementById('listTracker').addEventListener('click', function(ev) {
+    var item = ev.target.closest('.list-item');
+    if (!item) return;
+    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.catatan);
+  });
+  document.getElementById('listTracker').addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var item = ev.target.closest('.list-item');
+    if (!item) return;
+    ev.preventDefault();
+    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.catatan);
+  });
+
+  document.getElementById('modalCancel').addEventListener('click', tutupModal);
+  document.getElementById('modalOverlay').addEventListener('click', function(ev) {
+    if (ev.target === this) tutupModal();
+  });
+  document.getElementById('modalSave').addEventListener('click', simpanStatus);
+}
+
+function isiFilterArea() {
+  var areaSel = document.getElementById('selectArea');
+  var areas = [];
+  DATA_ALL.forEach(function(m) {
+    if (m.area && m.area !== '-' && areas.indexOf(m.area) === -1) areas.push(m.area);
+  });
+  areas.sort();
+  areaSel.innerHTML = '<option value="">Semua Area</option>' +
+    areas.map(function(a) { return '<option value="' + escAttr(a) + '">' + escHtml(a) + '</option>'; }).join('');
+}
+
+function badgeClassFor(status) {
+  if (status === 'On Progress') return 'badge-progress';
+  if (status === 'Live') return 'badge-live';
+  return 'badge-visit';
+}
+
+function render() {
+  var keyword = (document.getElementById('searchBox') && document.getElementById('searchBox').value || '').toLowerCase().trim();
+
+  var filtered = DATA_ALL.filter(function(m) {
+    if (STATUS_FILTER && m.status !== STATUS_FILTER) return false;
+    if (AREA_FILTER && m.area !== AREA_FILTER) return false;
+    if (!keyword) return true;
+    var gabungan = (m.namaMerchant + ' ' + m.namaCabang + ' ' + m.area + ' ' + m.kodeCabang).toLowerCase();
+    return gabungan.indexOf(keyword) !== -1;
+  });
+
+  // Ringkasan dihitung dari cakupan Area yang dipilih (bukan hasil
+  // pencarian/status), supaya angkanya tetap relevan dengan scope yang dilihat.
+  var cakupan = AREA_FILTER ? DATA_ALL.filter(function(m) { return m.area === AREA_FILTER; }) : DATA_ALL;
+  var visit = 0, progress = 0, live = 0;
+  cakupan.forEach(function(m) {
+    if (m.status === 'On Progress') progress++;
+    else if (m.status === 'Live') live++;
+    else visit++;
+  });
+  document.getElementById('statTotal').textContent = formatAngka(cakupan.length);
+  document.getElementById('statVisit').textContent = formatAngka(visit);
+  document.getElementById('statProgress').textContent = formatAngka(progress);
+  document.getElementById('statLive').textContent = formatAngka(live);
+
+  var wrap = document.getElementById('listTracker');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="empty">Tidak ada merchant yang cocok.</div>';
+    return;
+  }
+
+  wrap.innerHTML = filtered.map(function(m) {
+    var infoBaris = '<div class="list-item-info">' + escHtml(m.area) + ' · ' + escHtml(m.namaCabang) + ' (' + escHtml(m.kodeCabang) + ')</div>';
+    var alamatGabungan = [m.alamat, m.kota].filter(function(v) { return v && v !== '-'; }).join(', ');
+    var alamatBaris = alamatGabungan ? '<div class="list-item-alamat">' + escHtml(alamatGabungan) + '</div>' : '';
+    var ariaLabel = m.namaMerchant + ', status ' + m.status + '. Tekan untuk update progress.';
+    return '' +
+      // Catatan: data-alamat pakai m.alamat MENTAH (bukan alamatGabungan yang
+      // sudah digabung dgn Kota) — dikirim balik ke server buat pembeda
+      // tambahan kalau ada 2 merchant beda dengan nama sama di 1 cabang.
+      '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-kode="' + escAttr(m.kodeCabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '" data-status="' + escAttr(m.status) + '" data-nama-cabang="' + escAttr(m.namaCabang) + '" data-alamat="' + escAttr(m.alamat && m.alamat !== '-' ? m.alamat : '') + '" data-catatan="' + escAttr(m.catatan && m.catatan !== '-' ? m.catatan : '') + '">' +
+        '<div class="list-item-top">' +
+          '<span class="list-item-nama">' + escHtml(m.namaMerchant) + '</span>' +
+          '<span class="badge ' + badgeClassFor(m.status) + '">' + escHtml(m.status) + '</span>' +
+        '</div>' +
+        infoBaris +
+        alamatBaris +
+        '<div class="list-item-tgl">Update terakhir: ' + escHtml(m.tanggalUpdate) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s) {
+  return escHtml(s).replace(/"/g,'&quot;');
+}
+
+// ── Modal update status ──────────────────────────────────────────
+var STATUS_VALID = ['Visit', 'On Progress', 'Live'];
+
+function bukaModal(kodeCabang, namaMerchant, statusSaatIni, namaCabang, alamat, catatan) {
+  MODAL_TARGET = { kodeCabang: kodeCabang, namaMerchant: namaMerchant, namaCabang: namaCabang, alamat: alamat || '' };
+  document.getElementById('modalMerchant').textContent = namaMerchant;
+  document.getElementById('modalCabang').textContent = namaCabang + ' (' + kodeCabang + ')';
+  document.getElementById('modalAlamat').textContent = alamat || '';
+  document.getElementById('modalCatatan').value = catatan || '';
+  document.getElementById('modalStatus').value = STATUS_VALID.indexOf(statusSaatIni) !== -1 ? statusSaatIni : 'Visit';
+  document.getElementById('modalError').classList.remove('show');
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function tutupModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  MODAL_TARGET = null;
+}
+
+function simpanStatus() {
+  if (!MODAL_TARGET) return;
+  var statusBaru = document.getElementById('modalStatus').value;
+  var catatanValue = document.getElementById('modalCatatan').value.trim();
+  var errBox = document.getElementById('modalError');
+  errBox.classList.remove('show');
+
+  document.getElementById('modalSave').disabled = true;
+  document.getElementById('modalSave').textContent = 'Menyimpan...';
+
+  var params = new URLSearchParams({
+    action       : 'updateLivinMigrasiStatus',
+    kodeCabang   : MODAL_TARGET.kodeCabang,
+    namaMerchant : MODAL_TARGET.namaMerchant,
+    alamat       : MODAL_TARGET.alamat || '',
+    status       : statusBaru,
+    catatan      : catatanValue
+  });
+
+  // Target disalin ke variabel lokal (bukan baca MODAL_TARGET lagi pas
+  // request selesai) — soalnya kalau user tutup modal sebelum retry
+  // selesai, MODAL_TARGET sudah di-null-kan oleh tutupModal().
+  kirimUpdateStatus(params, MODAL_TARGET, statusBaru, catatanValue, 3);
+}
+
+// Update status aman diulang otomatis (nimpa baris yang sama di sheet,
+// tidak bikin data dobel). Coba ulang beberapa kali dulu sebelum benar-benar
+// nampilin error ke user, sama seperti pola retry di muatData().
+function kirimUpdateStatus(params, target, statusBaru, catatanValue, sisaPercobaan) {
+  var btn = document.getElementById('modalSave');
+  var errBox = document.getElementById('modalError');
+
+  fetch(APPS_SCRIPT_URL + '?' + params.toString())
+    .then(function(r) { return r.text(); })
+    .then(function(teks) {
+      var res;
+      try {
+        res = JSON.parse(teks);
+      } catch (e) {
+        throw new Error('respons bukan JSON (server sedang sibuk)');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+      if (res.maintenance) {
+        errBox.textContent = 'Sistem sedang dalam pemeliharaan data, coba lagi nanti.';
+        errBox.classList.add('show');
+        return;
+      }
+      if (!res.success) {
+        errBox.textContent = res.error || 'Gagal menyimpan. Coba lagi.';
+        errBox.classList.add('show');
+        return;
+      }
+      // Update data lokal supaya list & ringkasan langsung mencerminkan perubahan
+      DATA_ALL.forEach(function(m) {
+        if (m.kodeCabang === target.kodeCabang && m.namaMerchant === target.namaMerchant) {
+          m.status = statusBaru;
+          if (catatanValue) m.catatan = catatanValue;
+          m.tanggalUpdate = 'Baru saja';
+        }
+      });
+      tutupModal();
+      render();
+      toast('Status berhasil diperbarui!');
+    })
+    .catch(function(err) {
+      if (sisaPercobaan > 1) {
+        btn.textContent = 'Server sibuk, mencoba lagi...';
+        setTimeout(function() {
+          kirimUpdateStatus(params, target, statusBaru, catatanValue, sisaPercobaan - 1);
+        }, 2000);
+        return;
+      }
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+      errBox.textContent = 'Gagal menyimpan: ' + err.message;
+      errBox.classList.add('show');
+    });
+}
+
+var toastTimer = null;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2600);
+}
+
+function tampilkanKosong() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('kontenTracker').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+}
+
+function tampilkanError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('kontenTracker').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'block';
+  document.getElementById('errorMsg').textContent = msg;
+}
+</script>
+</body>
+</html>

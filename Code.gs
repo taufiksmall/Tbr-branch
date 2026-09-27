@@ -20,8 +20,14 @@ var CONFIG = {
   NAMA_SHEET_LOG: "Log Laporan",        // Nama tab log (dibuat otomatis)
   NAMA_SHEET_LIVIN: "Monitoring Livin' Food",  // Nama tab monitoring Livin' Food
   NAMA_SHEET_PIPELINE: "Pipeline EDC to LVM",  // Nama tab pipeline konversi EDC to LVM
-  NAMA_SHEET_LEAKAGE: "Pipeline Leakage Top 100"  // Nama tab pipeline leakage top 100
+  NAMA_SHEET_LEAKAGE: "Pipeline Leakage Top 100",  // Nama tab pipeline leakage top 100
+  NAMA_SHEET_LIVIN_MIGRASI: "Migrasi Livin' Food"  // Nama tab tracker progress migrasi merchant ke Livin' Food
 };
+
+// Tahapan status progress migrasi merchant ke Livin' Food yang valid —
+// dipakai di tracker-livin-food.html (beda dari STATUS_EDC_LVM_VALID yang
+// dipakai pipeline.html buat konversi EDC ke LVM).
+var STATUS_LIVIN_MIGRASI_VALID = ['Visit', 'On Progress', 'Live'];
 
 // Pilihan dropdown yang valid buat form follow up di monitoring-top100-leakage.html.
 var KETERANGAN_LEAKAGE_VALID = [
@@ -180,6 +186,41 @@ function doGet(e) {
       return jsonResponse({ data: getLeakageAll(kodeAreaFilter) });
     } catch (err) {
       return jsonResponse({ data: [], error: err.message });
+    }
+  }
+
+  // ── GET LIVIN MIGRASI ALL: ambil semua data tracker progress migrasi
+  //    merchant ke Livin' Food, opsional difilter per kodeCabang —
+  //    dipakai tracker-livin-food.html ──────────────────────────────
+  if (action === 'getLivinMigrasiAll') {
+    try {
+      var kodeCabangLivinQ = e.parameter.kodeCabang || '';
+      return jsonResponse({ data: getLivinMigrasiAll(kodeCabangLivinQ) });
+    } catch (err) {
+      return jsonResponse({ data: [], error: err.message });
+    }
+  }
+
+  // ── UPDATE LIVIN MIGRASI STATUS: update status progress migrasi satu
+  //    merchant (Visit/On Progress/Live), dipanggil dari tracker-livin-food.html
+  //    saat admin klik merchant lalu pilih status baru di modal ────────
+  if (action === 'updateLivinMigrasiStatus') {
+    try {
+      var ssLivinUpd = SpreadsheetApp.getActiveSpreadsheet();
+      var kodeCabangLivinUpd  = e.parameter.kodeCabang   || '';
+      var namaMerchantLivinUpd = e.parameter.namaMerchant || '';
+      var alamatLivinUpd     = e.parameter.alamat        || '';
+      var statusBaruLivinUpd = e.parameter.status        || '';
+      var catatanLivinUpd    = e.parameter.catatan       || '';
+
+      var berhasilLivinUpd = updateLivinMigrasiStatus(ssLivinUpd, kodeCabangLivinUpd, namaMerchantLivinUpd, statusBaruLivinUpd, alamatLivinUpd, catatanLivinUpd);
+      if (berhasilLivinUpd) {
+        return jsonResponse({ success: true });
+      } else {
+        return jsonResponse({ success: false, error: 'Merchant tidak ditemukan atau status tidak valid.' });
+      }
+    } catch (err) {
+      return jsonResponse({ success: false, error: err.message });
     }
   }
 
@@ -2652,6 +2693,161 @@ function styleHeader(range, bgHex, fontHex, bold, halign) {
        .setVerticalAlignment('middle')
        .setWrap(true);
   return range;
+}
+
+// ============================================================
+// TRACKER MIGRASI LIVIN' FOOD — progress kunjungan migrasi merchant
+// (beda dengan "Monitoring Livin' Food" di atas, yang merekap JUMLAH
+// ORDER mingguan; sheet ini merekap STATUS PROGRESS migrasi tiap
+// merchant target: Visit → On Progress → Live). Data master merchant
+// (Kode Cabang, Nama Cabang, Area, Nama Merchant, dst.) di-IMPORT manual
+// oleh admin ke sheet "Migrasi Livin' Food" — mirip cara kerja sheet
+// "Pipeline EDC to LVM" (lihat setupSheetPipeline()).
+// ============================================================
+
+/**
+ * Ambil / buat sheet "Migrasi Livin' Food". Kalau baru dibuat, cuma diisi
+ * header saja — data merchant diisi/di-import manual oleh admin.
+ */
+function getOrCreateSheetLivinMigrasi(ss) {
+  var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
+    var headers = [
+      'Kode Cabang', 'Nama Cabang', 'Area', 'Nama Merchant', 'Alamat', 'Kota',
+      'Status Progress', 'Tanggal Update Terakhir', 'Catatan'
+    ];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Jalankan SEKALI dari Apps Script Editor untuk menyiapkan sheet
+ * "Migrasi Livin' Food" kalau belum ada. Setelah itu import/isi manual
+ * data master merchant-nya (kolom "Status Progress" & "Tanggal Update
+ * Terakhir" biar terisi otomatis lewat tracker-livin-food.html).
+ */
+function setupSheetLivinMigrasi() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  getOrCreateSheetLivinMigrasi(ss);
+  beriTahu('✅ Sheet "' + CONFIG.NAMA_SHEET_LIVIN_MIGRASI + '" berhasil disiapkan! Silakan import/isi data merchant-nya secara manual.');
+}
+
+/**
+ * Ambil SEMUA data tracker migrasi Livin' Food, opsional difilter per
+ * kodeCabang — dipakai tracker-livin-food.html lewat action=getLivinMigrasiAll.
+ */
+function getLivinMigrasiAll(kodeCabangFilter) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
+  if (!sheet) return [];
+
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  var headers     = data[0];
+  var idxKode     = headers.indexOf('Kode Cabang');
+  var idxNama     = headers.indexOf('Nama Cabang');
+  var idxArea     = headers.indexOf('Area');
+  var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
+  var idxAlamat   = _cariIndexHeader(headers, ['Alamat', 'alamat']);
+  var idxKota     = _cariIndexHeader(headers, ['Kota', 'kota']);
+  var idxStatus   = headers.indexOf('Status Progress');
+  var idxTgl      = headers.indexOf('Tanggal Update Terakhir');
+  var idxCatatan  = headers.indexOf('Catatan');
+
+  var kodeCari = String(kodeCabangFilter || '').trim();
+  var hasil = [];
+  for (var i = 1; i < data.length; i++) {
+    var kodeBaris    = String(data[i][idxKode] || '').trim();
+    var namaMerchant = String(data[i][idxMerchant] || '').trim();
+    if (!kodeBaris || !namaMerchant) continue;
+    if (kodeCari && kodeBaris !== kodeCari) continue;
+
+    var statusBaris = String(data[i][idxStatus] || '').trim();
+
+    hasil.push({
+      kodeCabang    : kodeBaris,
+      namaCabang    : data[i][idxNama] || '-',
+      area          : data[i][idxArea] || '-',
+      namaMerchant  : namaMerchant,
+      alamat        : idxAlamat  !== -1 ? (data[i][idxAlamat] || '-') : '-',
+      kota          : idxKota    !== -1 ? (data[i][idxKota]   || '-') : '-',
+      status        : STATUS_LIVIN_MIGRASI_VALID.indexOf(statusBaris) !== -1 ? statusBaris : 'Visit',
+      tanggalUpdate : data[i][idxTgl] ? formatTanggal(data[i][idxTgl]) : '-',
+      catatan       : idxCatatan !== -1 ? (data[i][idxCatatan] || '-') : '-'
+    });
+  }
+  return hasil;
+}
+
+/**
+ * Update status progress migrasi satu merchant di sheet "Migrasi Livin'
+ * Food". Dipanggil dari action=updateLivinMigrasiStatus (tracker-livin-food.html).
+ * Mencari baris yang cocok (Kode Cabang + Nama Merchant, dipertajam pakai
+ * Alamat kalau ada & dikirim), lalu menimpa Status Progress, Catatan
+ * (kalau diisi), & Tanggal Update Terakhir baris itu — bukan menambah
+ * baris baru. Return true kalau baris ditemukan & berhasil diupdate.
+ */
+function updateLivinMigrasiStatus(ss, kodeCabang, namaMerchant, statusBaru, alamat, catatan) {
+  var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
+  if (!sheet) return false;
+
+  if (STATUS_LIVIN_MIGRASI_VALID.indexOf(statusBaru) === -1) {
+    Logger.log('Status progress migrasi Livin Food tidak valid: ' + statusBaru);
+    return false;
+  }
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return false;
+
+  var headers     = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var idxKode     = headers.indexOf('Kode Cabang');
+  var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
+  var idxAlamat   = _cariIndexHeader(headers, ['Alamat', 'alamat']);
+  var idxStatus   = headers.indexOf('Status Progress');
+  var idxTgl      = headers.indexOf('Tanggal Update Terakhir');
+  var idxCatatan  = headers.indexOf('Catatan');
+  if (idxKode === -1 || idxMerchant === -1 || idxStatus === -1) return false;
+
+  var kolomKode     = sheet.getRange(2, idxKode + 1, lastRow - 1, 1).getValues();
+  var kolomMerchant = sheet.getRange(2, idxMerchant + 1, lastRow - 1, 1).getValues();
+  var kolomAlamat   = idxAlamat !== -1
+    ? sheet.getRange(2, idxAlamat + 1, lastRow - 1, 1).getValues()
+    : null;
+
+  var kodeCari     = String(kodeCabang || '').trim();
+  var merchantCari = String(namaMerchant || '').trim();
+  var alamatCari   = String(alamat || '').trim();
+  var pakaiAlamat  = idxAlamat !== -1 && alamatCari !== '';
+
+  for (var i = 0; i < kolomKode.length; i++) {
+    var kodeBaris     = String(kolomKode[i][0] || '').trim();
+    var merchantBaris = String(kolomMerchant[i][0] || '').trim();
+    if (kodeBaris !== kodeCari || merchantBaris !== merchantCari) continue;
+    if (pakaiAlamat) {
+      var alamatBaris = String(kolomAlamat[i][0] || '').trim();
+      if (alamatBaris !== alamatCari) continue;
+    }
+
+    var row = i + 2; // +2: lewati baris header, kolom-kolom di atas 0-based mulai dari baris 2
+    sheet.getRange(row, idxStatus + 1).setValue(statusBaru);
+    if (idxCatatan !== -1 && catatan && String(catatan).trim()) {
+      sheet.getRange(row, idxCatatan + 1).setValue(String(catatan).trim());
+    }
+    if (idxTgl !== -1) {
+      sheet.getRange(row, idxTgl + 1).setValue(
+        Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
+      );
+    }
+    return true;
+  }
+  return false;
 }
 
 /**
