@@ -252,6 +252,30 @@ function doGet(e) {
     return jsonResponse({ headersAsli: headersAsli, perbandingan: perbandingan });
   }
 
+  // ── DEBUG: bandingkan header ASLI di sheet "Migrasi Livin' Food" vs.
+  //    LIVIN_MIGRASI_HEADERS yang di-hardcode di Code.gs — dipakai buat
+  //    diagnosa kalau ada kolom yang gagal ke-update/kebaca padahal
+  //    sheet-nya keisi (mis. gara-gara header sheet asli beda dikit,
+  //    kayak kasus 3 header multi-baris di sheet ini). Nunjukin hasil
+  //    perbandingan PERSIS (exact match) & FLEKSIBEL (whitespace
+  //    dinormalisasi, lihat _idxHeaderFleksibel) biar kelihatan kalau
+  //    bedanya cuma soal whitespace atau memang beda kata sama sekali.
+  //    Aman dihapus kapan saja, tidak dipakai oleh halaman manapun.
+  if (action === 'debugLivinMigrasiHeaders') {
+    var ssDebugLivin = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetDebugLivin = ssDebugLivin.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
+    if (!sheetDebugLivin) return jsonResponse({ error: 'Sheet tidak ditemukan: ' + CONFIG.NAMA_SHEET_LIVIN_MIGRASI });
+    var headersAsliLivin = sheetDebugLivin.getRange(1, 1, 1, sheetDebugLivin.getLastColumn()).getValues()[0];
+    var perbandinganLivin = LIVIN_MIGRASI_HEADERS.map(function (h) {
+      return {
+        diharapkan       : h,
+        ditemukanPersis  : headersAsliLivin.indexOf(h) !== -1,
+        ditemukanFleksibel : _idxHeaderFleksibel(headersAsliLivin, h) !== -1
+      };
+    });
+    return jsonResponse({ headersAsli: headersAsliLivin, perbandingan: perbandinganLivin });
+  }
+
   // ── UPDATE LEAKAGE FOLLOW UP: simpan hasil follow up satu merchant
   //    leakage (dipanggil dari modal monitoring-top100-leakage.html) ──
   if (action === 'updateLeakageFollowUp') {
