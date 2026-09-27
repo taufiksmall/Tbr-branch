@@ -26,8 +26,21 @@ var CONFIG = {
 
 // Tahapan status progress migrasi merchant ke Livin' Food yang valid —
 // dipakai di tracker-livin-food.html (beda dari STATUS_EDC_LVM_VALID yang
-// dipakai pipeline.html buat konversi EDC ke LVM).
-var STATUS_LIVIN_MIGRASI_VALID = ['Visit', 'On Progress', 'Live'];
+// dipakai pipeline.html buat konversi EDC ke LVM). Urutan disusun sebagai
+// funnel Penawaran → Set Up → Aktivasi → Live; "Jadwal Ulang Owner tidak
+// di lokasi" adalah status pengecualian (kunjungan gagal, perlu dijadwal
+// ulang) yang bisa kejadian di percobaan kunjungan awal mana pun.
+var STATUS_LIVIN_MIGRASI_VALID = [
+  'Penawaran',
+  "Penawaran Livin' Food",
+  'Penawaran Merchant Berminat',
+  'Jadwal Ulang Owner tidak di lokasi',
+  'Set Up Katalog',
+  'Set Up Katalog & isi form whitelist beta',
+  'Aktivasi Beta LVM',
+  'Onboard LVM',
+  'Live'
+];
 
 // Pilihan dropdown yang valid buat form follow up di monitoring-top100-leakage.html.
 var KETERANGAN_LEAKAGE_VALID = [
@@ -190,34 +203,34 @@ function doGet(e) {
   }
 
   // ── GET LIVIN MIGRASI ALL: ambil semua data tracker progress migrasi
-  //    merchant ke Livin' Food, opsional difilter per kodeCabang —
-  //    dipakai tracker-livin-food.html ──────────────────────────────
+  //    merchant ke Livin' Food — dipakai tracker-livin-food.html ──────
   if (action === 'getLivinMigrasiAll') {
     try {
-      var kodeCabangLivinQ = e.parameter.kodeCabang || '';
-      return jsonResponse({ data: getLivinMigrasiAll(kodeCabangLivinQ) });
+      return jsonResponse({ data: getLivinMigrasiAll() });
     } catch (err) {
       return jsonResponse({ data: [], error: err.message });
     }
   }
 
-  // ── UPDATE LIVIN MIGRASI STATUS: update status progress migrasi satu
-  //    merchant (Visit/On Progress/Live), dipanggil dari tracker-livin-food.html
-  //    saat admin klik merchant lalu pilih status baru di modal ────────
+  // ── UPDATE LIVIN MIGRASI STATUS: update "Hasil Visit" (+ Reason Kendala)
+  //    satu merchant, dipanggil dari tracker-livin-food.html saat admin
+  //    klik merchant lalu pilih hasil visit baru di modal. Otomatis ikut
+  //    menandai "Sudah Visit" = Sudah & "Tanggal Visit" = hari ini, karena
+  //    isi Hasil Visit cuma masuk akal kalau kunjungannya sudah terjadi ──
   if (action === 'updateLivinMigrasiStatus') {
     try {
       var ssLivinUpd = SpreadsheetApp.getActiveSpreadsheet();
-      var kodeCabangLivinUpd  = e.parameter.kodeCabang   || '';
-      var namaMerchantLivinUpd = e.parameter.namaMerchant || '';
-      var alamatLivinUpd     = e.parameter.alamat        || '';
-      var statusBaruLivinUpd = e.parameter.status        || '';
-      var catatanLivinUpd    = e.parameter.catatan       || '';
+      var noLivinUpd           = e.parameter.no           || '';
+      var cabangLivinUpd       = e.parameter.cabang        || '';
+      var namaMerchantLivinUpd = e.parameter.namaMerchant  || '';
+      var hasilVisitBaruUpd    = e.parameter.hasilVisit    || '';
+      var reasonKendalaUpd     = e.parameter.reasonKendala || '';
 
-      var berhasilLivinUpd = updateLivinMigrasiStatus(ssLivinUpd, kodeCabangLivinUpd, namaMerchantLivinUpd, statusBaruLivinUpd, alamatLivinUpd, catatanLivinUpd);
+      var berhasilLivinUpd = updateLivinMigrasiStatus(ssLivinUpd, noLivinUpd, cabangLivinUpd, namaMerchantLivinUpd, hasilVisitBaruUpd, reasonKendalaUpd);
       if (berhasilLivinUpd) {
         return jsonResponse({ success: true });
       } else {
-        return jsonResponse({ success: false, error: 'Merchant tidak ditemukan atau status tidak valid.' });
+        return jsonResponse({ success: false, error: 'Merchant tidak ditemukan atau Hasil Visit tidak valid.' });
       }
     } catch (err) {
       return jsonResponse({ success: false, error: err.message });
@@ -2699,11 +2712,25 @@ function styleHeader(range, bgHex, fontHex, bold, halign) {
 // TRACKER MIGRASI LIVIN' FOOD — progress kunjungan migrasi merchant
 // (beda dengan "Monitoring Livin' Food" di atas, yang merekap JUMLAH
 // ORDER mingguan; sheet ini merekap STATUS PROGRESS migrasi tiap
-// merchant target: Visit → On Progress → Live). Data master merchant
-// (Kode Cabang, Nama Cabang, Area, Nama Merchant, dst.) di-IMPORT manual
-// oleh admin ke sheet "Migrasi Livin' Food" — mirip cara kerja sheet
+// merchant target: funnel Visit → LVM → Deal Livin' Food → Visit Beta →
+// Aktivasi, masing-masing punya flag Sudah/Belum + tanggal + reason kalau
+// mentok). Data master merchant (Region, Area, Cabang, Nama Merchant, dst.)
+// di-IMPORT manual oleh admin ke sheet "Migrasi Livin' Food" dengan header
+// PERSIS seperti LIVIN_MIGRASI_HEADERS di bawah — mirip cara kerja sheet
 // "Pipeline EDC to LVM" (lihat setupSheetPipeline()).
 // ============================================================
+
+// Header sheet "Migrasi Livin' Food", urutan & penulisan PERSIS harus sama
+// dengan file sumber yang di-import admin (kolom "No" dipakai sebagai ID
+// unik baris tiap merchant — lihat updateLivinMigrasiStatus()).
+var LIVIN_MIGRASI_HEADERS = [
+  'No', 'Region', 'Area', 'Cabang', 'Nama Merchant', 'Sumber Pipeline', 'Kota',
+  'Sudah Visit', 'Tanggal Visit (Updated terakhir)', 'Hasil Visit', 'Reason Kendala (Free Text)',
+  'Sudah LVM', 'Kategori Reason Belum LVM', 'Reason Belum LVM (free text)',
+  'Sudah Deal Livin Food', 'Kategori Reason Belum Deal', 'Reason Belum Deal LF (Free Text)',
+  'Sudah Visit Beta', 'Tanggal Visit Beta (Updated terakhir)', 'Visit Beta (drop down)',
+  'Reason Kendala Visit Beta (Free Text)', 'Sudah Aktivasi Livin Food'
+];
 
 /**
  * Ambil / buat sheet "Migrasi Livin' Food". Kalau baru dibuat, cuma diisi
@@ -2713,12 +2740,8 @@ function getOrCreateSheetLivinMigrasi(ss) {
   var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
-    var headers = [
-      'Kode Cabang', 'Nama Cabang', 'Area', 'Nama Merchant', 'Alamat', 'Kota',
-      'Status Progress', 'Tanggal Update Terakhir', 'Catatan'
-    ];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length)
+    sheet.getRange(1, 1, 1, LIVIN_MIGRASI_HEADERS.length).setValues([LIVIN_MIGRASI_HEADERS]);
+    sheet.getRange(1, 1, 1, LIVIN_MIGRASI_HEADERS.length)
       .setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
     sheet.setFrozenRows(1);
   }
@@ -2728,8 +2751,8 @@ function getOrCreateSheetLivinMigrasi(ss) {
 /**
  * Jalankan SEKALI dari Apps Script Editor untuk menyiapkan sheet
  * "Migrasi Livin' Food" kalau belum ada. Setelah itu import/isi manual
- * data master merchant-nya (kolom "Status Progress" & "Tanggal Update
- * Terakhir" biar terisi otomatis lewat tracker-livin-food.html).
+ * data master merchant-nya (kolom "Hasil Visit", "Sudah Visit" & "Tanggal
+ * Visit (Updated terakhir)" biar terisi otomatis lewat tracker-livin-food.html).
  */
 function setupSheetLivinMigrasi() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2738,10 +2761,13 @@ function setupSheetLivinMigrasi() {
 }
 
 /**
- * Ambil SEMUA data tracker migrasi Livin' Food, opsional difilter per
- * kodeCabang — dipakai tracker-livin-food.html lewat action=getLivinMigrasiAll.
+ * Ambil SEMUA data tracker migrasi Livin' Food — dipakai tracker-livin-food.html
+ * lewat action=getLivinMigrasiAll. Field funnel lain (Sudah LVM, Sudah Deal
+ * Livin Food, Sudah Visit Beta, Sudah Aktivasi) ikut dibalikin sebagai info
+ * read-only (ditampilkan sebagai indikator di daftar), tapi diedit manual
+ * oleh admin langsung di Google Sheets — bukan lewat halaman ini.
  */
-function getLivinMigrasiAll(kodeCabangFilter) {
+function getLivinMigrasiAll() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
   if (!sheet) return [];
@@ -2749,56 +2775,71 @@ function getLivinMigrasiAll(kodeCabangFilter) {
   var data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
 
-  var headers     = data[0];
-  var idxKode     = headers.indexOf('Kode Cabang');
-  var idxNama     = headers.indexOf('Nama Cabang');
-  var idxArea     = headers.indexOf('Area');
+  var headers   = data[0];
+  var idxNo     = headers.indexOf('No');
+  var idxRegion = headers.indexOf('Region');
+  var idxArea   = headers.indexOf('Area');
+  var idxCabang = headers.indexOf('Cabang');
   var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
-  var idxAlamat   = _cariIndexHeader(headers, ['Alamat', 'alamat']);
-  var idxKota     = _cariIndexHeader(headers, ['Kota', 'kota']);
-  var idxStatus   = headers.indexOf('Status Progress');
-  var idxTgl      = headers.indexOf('Tanggal Update Terakhir');
-  var idxCatatan  = headers.indexOf('Catatan');
+  var idxSumber = headers.indexOf('Sumber Pipeline');
+  var idxKota   = headers.indexOf('Kota');
+  var idxSudahVisit  = headers.indexOf('Sudah Visit');
+  var idxTglVisit    = headers.indexOf('Tanggal Visit (Updated terakhir)');
+  var idxHasilVisit  = headers.indexOf('Hasil Visit');
+  var idxReasonKendala = headers.indexOf('Reason Kendala (Free Text)');
+  var idxSudahLVM    = headers.indexOf('Sudah LVM');
+  var idxSudahDeal   = headers.indexOf('Sudah Deal Livin Food');
+  var idxSudahVisitBeta  = headers.indexOf('Sudah Visit Beta');
+  var idxSudahAktivasi   = headers.indexOf('Sudah Aktivasi Livin Food');
 
-  var kodeCari = String(kodeCabangFilter || '').trim();
   var hasil = [];
   for (var i = 1; i < data.length; i++) {
-    var kodeBaris    = String(data[i][idxKode] || '').trim();
-    var namaMerchant = String(data[i][idxMerchant] || '').trim();
-    if (!kodeBaris || !namaMerchant) continue;
-    if (kodeCari && kodeBaris !== kodeCari) continue;
+    var namaMerchant = idxMerchant !== -1 ? String(data[i][idxMerchant] || '').trim() : '';
+    var cabangBaris   = idxCabang  !== -1 ? String(data[i][idxCabang] || '').trim() : '';
+    if (!namaMerchant) continue; // baris kosong, lewati
 
-    var statusBaris = String(data[i][idxStatus] || '').trim();
+    var hasilVisitBaris = idxHasilVisit !== -1 ? String(data[i][idxHasilVisit] || '').trim() : '';
 
     hasil.push({
-      kodeCabang    : kodeBaris,
-      namaCabang    : data[i][idxNama] || '-',
-      area          : data[i][idxArea] || '-',
+      no            : idxNo     !== -1 ? String(data[i][idxNo] || '').trim() : '',
+      region        : idxRegion !== -1 ? (data[i][idxRegion] || '-') : '-',
+      area          : idxArea   !== -1 ? (data[i][idxArea]   || '-') : '-',
+      cabang        : cabangBaris || '-',
       namaMerchant  : namaMerchant,
-      alamat        : idxAlamat  !== -1 ? (data[i][idxAlamat] || '-') : '-',
-      kota          : idxKota    !== -1 ? (data[i][idxKota]   || '-') : '-',
-      status        : STATUS_LIVIN_MIGRASI_VALID.indexOf(statusBaris) !== -1 ? statusBaris : 'Visit',
-      tanggalUpdate : data[i][idxTgl] ? formatTanggal(data[i][idxTgl]) : '-',
-      catatan       : idxCatatan !== -1 ? (data[i][idxCatatan] || '-') : '-'
+      sumberPipeline: idxSumber !== -1 ? (data[i][idxSumber] || '-') : '-',
+      kota          : idxKota   !== -1 ? (data[i][idxKota]   || '-') : '-',
+      sudahVisit    : idxSudahVisit !== -1 ? (data[i][idxSudahVisit] || 'Belum') : 'Belum',
+      tanggalVisit  : idxTglVisit !== -1 && data[i][idxTglVisit] ? formatTanggal(data[i][idxTglVisit]) : '-',
+      hasilVisit    : STATUS_LIVIN_MIGRASI_VALID.indexOf(hasilVisitBaris) !== -1 ? hasilVisitBaris : '-',
+      reasonKendala : idxReasonKendala !== -1 ? (data[i][idxReasonKendala] || '-') : '-',
+      sudahLVM      : idxSudahLVM  !== -1 ? (data[i][idxSudahLVM]  || 'Belum') : 'Belum',
+      sudahDeal     : idxSudahDeal !== -1 ? (data[i][idxSudahDeal] || 'Belum') : 'Belum',
+      sudahVisitBeta: idxSudahVisitBeta !== -1 ? (data[i][idxSudahVisitBeta] || 'Belum') : 'Belum',
+      sudahAktivasi : idxSudahAktivasi  !== -1 ? (data[i][idxSudahAktivasi]  || 'Belum') : 'Belum'
     });
   }
   return hasil;
 }
 
 /**
- * Update status progress migrasi satu merchant di sheet "Migrasi Livin'
- * Food". Dipanggil dari action=updateLivinMigrasiStatus (tracker-livin-food.html).
- * Mencari baris yang cocok (Kode Cabang + Nama Merchant, dipertajam pakai
- * Alamat kalau ada & dikirim), lalu menimpa Status Progress, Catatan
- * (kalau diisi), & Tanggal Update Terakhir baris itu — bukan menambah
- * baris baru. Return true kalau baris ditemukan & berhasil diupdate.
+ * Update "Hasil Visit" (+ "Reason Kendala (Free Text)") satu merchant di
+ * sheet "Migrasi Livin' Food". Dipanggil dari action=updateLivinMigrasiStatus
+ * (tracker-livin-food.html). Mencari baris yang cocok — PRIORITAS pakai
+ * kolom "No" (ID unik baris paling diandalkan kalau diisi), fallback ke
+ * Cabang + Nama Merchant kalau "No" kosong/tidak dikirim. Baris yang cocok
+ * lalu ditimpa Hasil Visit, Reason Kendala (kalau diisi), "Sudah Visit"
+ * otomatis ditandai "Sudah", & "Tanggal Visit (Updated terakhir)" hari ini
+ * — soalnya isi Hasil Visit cuma masuk akal kalau kunjungannya sudah
+ * terjadi. Field funnel lain (Sudah LVM/Deal/Visit Beta/Aktivasi) TIDAK
+ * disentuh di sini — itu diisi manual admin di Google Sheets. Return true
+ * kalau baris ditemukan & berhasil diupdate.
  */
-function updateLivinMigrasiStatus(ss, kodeCabang, namaMerchant, statusBaru, alamat, catatan) {
+function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, reasonKendala) {
   var sheet = ss.getSheetByName(CONFIG.NAMA_SHEET_LIVIN_MIGRASI);
   if (!sheet) return false;
 
-  if (STATUS_LIVIN_MIGRASI_VALID.indexOf(statusBaru) === -1) {
-    Logger.log('Status progress migrasi Livin Food tidak valid: ' + statusBaru);
+  if (STATUS_LIVIN_MIGRASI_VALID.indexOf(hasilVisitBaru) === -1) {
+    Logger.log('Hasil Visit migrasi Livin Food tidak valid: ' + hasilVisitBaru);
     return false;
   }
 
@@ -2806,42 +2847,43 @@ function updateLivinMigrasiStatus(ss, kodeCabang, namaMerchant, statusBaru, alam
   var lastCol = sheet.getLastColumn();
   if (lastRow < 2) return false;
 
-  var headers     = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var idxKode     = headers.indexOf('Kode Cabang');
+  var headers   = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var idxNo       = headers.indexOf('No');
+  var idxCabang   = headers.indexOf('Cabang');
   var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
-  var idxAlamat   = _cariIndexHeader(headers, ['Alamat', 'alamat']);
-  var idxStatus   = headers.indexOf('Status Progress');
-  var idxTgl      = headers.indexOf('Tanggal Update Terakhir');
-  var idxCatatan  = headers.indexOf('Catatan');
-  if (idxKode === -1 || idxMerchant === -1 || idxStatus === -1) return false;
+  var idxSudahVisit = headers.indexOf('Sudah Visit');
+  var idxTglVisit   = headers.indexOf('Tanggal Visit (Updated terakhir)');
+  var idxHasilVisit = headers.indexOf('Hasil Visit');
+  var idxReasonKendala = headers.indexOf('Reason Kendala (Free Text)');
+  if (idxMerchant === -1 || idxHasilVisit === -1) return false;
 
-  var kolomKode     = sheet.getRange(2, idxKode + 1, lastRow - 1, 1).getValues();
+  var kolomNo       = idxNo !== -1 ? sheet.getRange(2, idxNo + 1, lastRow - 1, 1).getValues() : null;
+  var kolomCabang   = idxCabang !== -1 ? sheet.getRange(2, idxCabang + 1, lastRow - 1, 1).getValues() : null;
   var kolomMerchant = sheet.getRange(2, idxMerchant + 1, lastRow - 1, 1).getValues();
-  var kolomAlamat   = idxAlamat !== -1
-    ? sheet.getRange(2, idxAlamat + 1, lastRow - 1, 1).getValues()
-    : null;
 
-  var kodeCari     = String(kodeCabang || '').trim();
+  var noCari       = String(no || '').trim();
+  var cabangCari   = String(cabang || '').trim();
   var merchantCari = String(namaMerchant || '').trim();
-  var alamatCari   = String(alamat || '').trim();
-  var pakaiAlamat  = idxAlamat !== -1 && alamatCari !== '';
+  var pakaiNo      = kolomNo !== null && noCari !== '';
 
-  for (var i = 0; i < kolomKode.length; i++) {
-    var kodeBaris     = String(kolomKode[i][0] || '').trim();
-    var merchantBaris = String(kolomMerchant[i][0] || '').trim();
-    if (kodeBaris !== kodeCari || merchantBaris !== merchantCari) continue;
-    if (pakaiAlamat) {
-      var alamatBaris = String(kolomAlamat[i][0] || '').trim();
-      if (alamatBaris !== alamatCari) continue;
+  for (var i = 0; i < kolomMerchant.length; i++) {
+    if (pakaiNo) {
+      var noBaris = String(kolomNo[i][0] || '').trim();
+      if (noBaris !== noCari) continue;
+    } else {
+      var merchantBaris = String(kolomMerchant[i][0] || '').trim();
+      var cabangBaris = kolomCabang !== null ? String(kolomCabang[i][0] || '').trim() : '';
+      if (merchantBaris !== merchantCari || cabangBaris !== cabangCari) continue;
     }
 
     var row = i + 2; // +2: lewati baris header, kolom-kolom di atas 0-based mulai dari baris 2
-    sheet.getRange(row, idxStatus + 1).setValue(statusBaru);
-    if (idxCatatan !== -1 && catatan && String(catatan).trim()) {
-      sheet.getRange(row, idxCatatan + 1).setValue(String(catatan).trim());
+    sheet.getRange(row, idxHasilVisit + 1).setValue(hasilVisitBaru);
+    if (idxReasonKendala !== -1 && reasonKendala && String(reasonKendala).trim()) {
+      sheet.getRange(row, idxReasonKendala + 1).setValue(String(reasonKendala).trim());
     }
-    if (idxTgl !== -1) {
-      sheet.getRange(row, idxTgl + 1).setValue(
+    if (idxSudahVisit !== -1) sheet.getRange(row, idxSudahVisit + 1).setValue('Sudah');
+    if (idxTglVisit !== -1) {
+      sheet.getRange(row, idxTglVisit + 1).setValue(
         Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
       );
     }

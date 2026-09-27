@@ -62,23 +62,30 @@
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
       gap: 10px;
     }
     .stat-box {
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 12px;
-      padding: 14px 6px;
+      padding: 12px 6px;
       text-align: center;
     }
     .stat-box.highlight { background: rgba(47,95,224,.12); border-color: rgba(47,95,224,.4); }
-    .stat-number { font-size: 24px; font-weight: 800; line-height: 1; color: #fff; }
+    .stat-number { font-size: 20px; font-weight: 800; line-height: 1; color: #fff; }
     .stat-box.highlight .stat-number { color: #8faaf5; }
-    .stat-box.visit .stat-number { color: #fbbf24; }
-    .stat-box.progress .stat-number { color: #2dd4bf; }
-    .stat-box.live .stat-number { color: #5ee08a; }
-    .stat-label { font-size: 10.5px; color: rgba(255,255,255,.65); font-weight: 600; margin-top: 5px; line-height: 1.3; }
+    .stat-box.belum .stat-number       { color: rgba(255,255,255,.55); }
+    .stat-box.penawaran .stat-number   { color: #fbbf24; }
+    .stat-box.penawaranlf .stat-number { color: #fb923c; }
+    .stat-box.berminat .stat-number    { color: #5eead4; }
+    .stat-box.reschedule .stat-number  { color: #f87171; }
+    .stat-box.setup .stat-number       { color: #38bdf8; }
+    .stat-box.setupwl .stat-number     { color: #818cf8; }
+    .stat-box.aktivasi .stat-number    { color: #a78bfa; }
+    .stat-box.onboard .stat-number     { color: #f472b6; }
+    .stat-box.live .stat-number        { color: #5ee08a; }
+    .stat-label { font-size: 9.5px; color: rgba(255,255,255,.65); font-weight: 600; margin-top: 5px; line-height: 1.3; }
 
     .field-label { display: block; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.7); margin-bottom: 7px; }
 
@@ -109,13 +116,13 @@
     .filter-tab {
       display: inline-flex;
       align-items: center;
-      min-height: 40px;
-      padding: 0 16px;
+      min-height: 38px;
+      padding: 0 14px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.14);
       background: rgba(255,255,255,.04);
       color: rgba(255,255,255,.75);
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       font-family: inherit;
       cursor: pointer;
@@ -138,16 +145,34 @@
     .list-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .list-item-nama { font-size: 14.5px; font-weight: 700; color: #fff; }
     .list-item-info { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 4px; }
-    .list-item-alamat { font-size: 11.5px; color: rgba(255,255,255,.55); margin-top: 3px; }
+    .list-item-reason { font-size: 11.5px; color: rgba(255,255,255,.55); margin-top: 3px; }
     .list-item-tgl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 6px; }
 
     .badge {
       font-size: 11px; font-weight: 700; padding: 4px 11px;
       border-radius: 999px; white-space: nowrap; flex-shrink: 0;
     }
-    .badge-visit    { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
-    .badge-progress { background: rgba(45,212,191,.16); color: #5eead4; border: 1px solid rgba(45,212,191,.4); }
-    .badge-live     { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+    .badge-belum       { background: rgba(255,255,255,.06); color: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.18); }
+    .badge-penawaran   { background: rgba(251,191,36,.16); color: #fbbf24; border: 1px solid rgba(251,191,36,.4); }
+    .badge-penawaranlf { background: rgba(251,146,60,.16); color: #fb923c; border: 1px solid rgba(251,146,60,.4); }
+    .badge-berminat    { background: rgba(45,212,191,.16); color: #5eead4; border: 1px solid rgba(45,212,191,.4); }
+    .badge-reschedule  { background: rgba(248,113,113,.16); color: #f87171; border: 1px solid rgba(248,113,113,.4); }
+    .badge-setup       { background: rgba(56,189,248,.16); color: #38bdf8; border: 1px solid rgba(56,189,248,.4); }
+    .badge-setupwl     { background: rgba(129,140,248,.16); color: #818cf8; border: 1px solid rgba(129,140,248,.4); }
+    .badge-aktivasi    { background: rgba(167,139,250,.16); color: #a78bfa; border: 1px solid rgba(167,139,250,.4); }
+    .badge-onboard     { background: rgba(244,114,182,.16); color: #f472b6; border: 1px solid rgba(244,114,182,.4); }
+    .badge-live        { background: rgba(94,224,138,.16); color: #86efac; border: 1px solid rgba(94,224,138,.4); }
+
+    /* Indikator progress funnel (Sudah LVM / Deal LF / Visit Beta / Aktivasi)
+       — read-only, cuma diisi/diubah manual admin di Google Sheets, bukan
+       lewat modal halaman ini (lihat catatan di updateLivinMigrasiStatus()). */
+    .funnel-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .funnel-chip {
+      font-size: 9.5px; font-weight: 700; padding: 3px 9px;
+      border-radius: 999px; border: 1px solid; white-space: nowrap;
+    }
+    .funnel-chip.sudah { color: #5ee08a; border-color: rgba(94,224,138,.4); background: rgba(94,224,138,.12); }
+    .funnel-chip.belum { color: rgba(255,255,255,.4); border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.03); }
 
     .empty { text-align: center; padding: 24px; color: rgba(255,255,255,.5); font-size: 13.5px; }
 
@@ -169,7 +194,7 @@
       text-decoration: underline;
     }
 
-    /* Modal update status */
+    /* Modal update Hasil Visit */
     .modal-overlay {
       display: none;
       position: fixed; inset: 0; z-index: 500;
@@ -187,9 +212,12 @@
       border-radius: 20px;
       padding: 24px;
       box-shadow: 0 30px 70px -20px rgba(0,0,0,.7);
+      max-height: 88vh;
+      overflow-y: auto;
     }
     .modal-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 19px; color: #fff; margin-bottom: 4px; }
     .modal-sub { font-size: 12.5px; color: rgba(255,255,255,.65); margin-bottom: 20px; }
+    .modal-funnel-title { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .3px; margin: 18px 0 8px; }
     .modal-error { font-size: 12.5px; color: #fca5a5; margin-top: 10px; display: none; }
     .modal-error.show { display: block; }
     .modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 22px; }
@@ -254,23 +282,15 @@
   <div id="kontenTracker" style="display:none;">
 
     <div class="card">
-      <div class="card-title">Ringkasan Progress Migrasi</div>
-      <div class="stats-row">
+      <div class="card-title">Ringkasan Progress Migrasi (Hasil Visit)</div>
+      <div class="stats-row" id="statsRow">
         <div class="stat-box highlight">
           <div class="stat-number" id="statTotal">0</div>
           <div class="stat-label">Total Merchant</div>
         </div>
-        <div class="stat-box visit">
-          <div class="stat-number" id="statVisit">0</div>
-          <div class="stat-label">Visit</div>
-        </div>
-        <div class="stat-box progress">
-          <div class="stat-number" id="statProgress">0</div>
-          <div class="stat-label">On Progress</div>
-        </div>
-        <div class="stat-box live">
-          <div class="stat-number" id="statLive">0</div>
-          <div class="stat-label">Live</div>
+        <div class="stat-box belum">
+          <div class="stat-number" id="stat-belum">0</div>
+          <div class="stat-label">Belum Visit</div>
         </div>
       </div>
     </div>
@@ -286,15 +306,13 @@
       <input type="text" id="searchBox" class="search-input" placeholder="Cari nama merchant / cabang...">
       <div class="filter-tabs" id="filterTabs">
         <button class="filter-tab active" data-status="">Semua</button>
-        <button class="filter-tab" data-status="Visit">Visit</button>
-        <button class="filter-tab" data-status="On Progress">On Progress</button>
-        <button class="filter-tab" data-status="Live">Live</button>
+        <button class="filter-tab" data-status="-">Belum Visit</button>
       </div>
     </div>
 
     <div class="card">
       <div class="card-title">Daftar Merchant</div>
-      <p style="font-size:12px;color:rgba(255,255,255,.6);margin:-10px 0 14px;">Klik salah satu merchant untuk update progress migrasi.</p>
+      <p style="font-size:12px;color:rgba(255,255,255,.6);margin:-10px 0 14px;">Klik salah satu merchant untuk update Hasil Visit. Indikator LVM/Deal LF/Visit Beta/Aktivasi diisi manual admin di Google Sheets.</p>
       <div id="listTracker"></div>
     </div>
 
@@ -323,22 +341,20 @@
   </div>
 </div>
 
-<!-- Modal update status -->
+<!-- Modal update Hasil Visit -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-panel">
     <div class="modal-title" id="modalMerchant">-</div>
     <div class="modal-sub" id="modalCabang">-</div>
-    <div class="modal-sub" id="modalAlamat" style="margin-top:-14px;"></div>
 
-    <label class="field-label">Status Progress</label>
-    <select id="modalStatus" class="select-input">
-      <option value="Visit">Visit</option>
-      <option value="On Progress">On Progress</option>
-      <option value="Live">Live</option>
-    </select>
+    <label class="field-label">Hasil Visit</label>
+    <select id="modalHasilVisit" class="select-input"></select>
 
-    <label class="field-label">Catatan</label>
-    <textarea id="modalCatatan" class="search-input" placeholder="Catatan follow up (opsional)" style="margin-bottom:0;min-height:70px;resize:vertical;"></textarea>
+    <label class="field-label">Reason Kendala (opsional)</label>
+    <textarea id="modalReasonKendala" class="search-input" placeholder="Kendala/keterangan hasil kunjungan (opsional)" style="margin-bottom:0;min-height:70px;resize:vertical;"></textarea>
+
+    <div class="modal-funnel-title">Status Funnel Lain (info, edit manual di Sheets)</div>
+    <div class="funnel-row" id="modalFunnelRow"></div>
 
     <div class="modal-error" id="modalError">Gagal menyimpan. Coba lagi.</div>
 
@@ -349,7 +365,7 @@
   </div>
 </div>
 
-<div id="toast">Status berhasil diperbarui!</div>
+<div id="toast">Hasil Visit berhasil diperbarui!</div>
 
 <script>
 // ================================================================
@@ -358,18 +374,90 @@
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzl4SiO8CeyYrF4vDwmx5D0n8qjcq3Vk5HHwFt56grTdyouKEyOAmiB6-vKurKTXS9U/exec";
 // ================================================================
 
+// Sama persis dengan STATUS_LIVIN_MIGRASI_VALID di Code.gs — urutan funnel
+// Penawaran → Set Up → Aktivasi → Live.
+var HASIL_VISIT_VALID = [
+  'Penawaran',
+  "Penawaran Livin' Food",
+  'Penawaran Merchant Berminat',
+  'Jadwal Ulang Owner tidak di lokasi',
+  'Set Up Katalog',
+  'Set Up Katalog & isi form whitelist beta',
+  'Aktivasi Beta LVM',
+  'Onboard LVM',
+  'Live'
+];
+
+// Kelas CSS (suffix) per nilai Hasil Visit, dipakai buat badge/stat/filter tab.
+var HASIL_VISIT_CLASS = {
+  'Penawaran'                                : 'penawaran',
+  "Penawaran Livin' Food"                    : 'penawaranlf',
+  'Penawaran Merchant Berminat'               : 'berminat',
+  'Jadwal Ulang Owner tidak di lokasi'        : 'reschedule',
+  'Set Up Katalog'                            : 'setup',
+  'Set Up Katalog & isi form whitelist beta'  : 'setupwl',
+  'Aktivasi Beta LVM'                         : 'aktivasi',
+  'Onboard LVM'                               : 'onboard',
+  'Live'                                      : 'live'
+};
+
 var DATA_ALL = [];
 var AREA_FILTER = '';
 var STATUS_FILTER = '';
-var MODAL_TARGET = null; // { kodeCabang, namaMerchant, namaCabang, alamat } sedang diedit
+var MODAL_TARGET = null; // { no, cabang, namaMerchant } sedang diedit
 
 function formatAngka(n) {
   return Number(n || 0).toLocaleString('id-ID');
 }
 
 window.onload = function() {
+  bangunStatsBoxes();
+  bangunFilterTabs();
+  isiSelectHasilVisit();
   cekMaintenanceLaluMuat();
 };
+
+// Bikin 1 stat-box per nilai Hasil Visit (selain "Total" & "Belum Visit"
+// yang statis di HTML) — biar labelnya selalu sinkron sama HASIL_VISIT_VALID.
+function bangunStatsBoxes() {
+  var wrap = document.getElementById('statsRow');
+  var labelSingkat = {
+    'Penawaran': 'Penawaran',
+    "Penawaran Livin' Food": 'Penawaran LF',
+    'Penawaran Merchant Berminat': 'Berminat',
+    'Jadwal Ulang Owner tidak di lokasi': 'Jadwal Ulang',
+    'Set Up Katalog': 'Set Up Katalog',
+    'Set Up Katalog & isi form whitelist beta': 'Set Up + WL Beta',
+    'Aktivasi Beta LVM': 'Aktivasi Beta',
+    'Onboard LVM': 'Onboard LVM',
+    'Live': 'Live'
+  };
+  var html = '';
+  HASIL_VISIT_VALID.forEach(function(status) {
+    var cls = HASIL_VISIT_CLASS[status];
+    html += '<div class="stat-box ' + cls + '">'
+      + '<div class="stat-number" id="stat-' + cls + '">0</div>'
+      + '<div class="stat-label">' + escHtml(labelSingkat[status]) + '</div>'
+      + '</div>';
+  });
+  wrap.insertAdjacentHTML('beforeend', html);
+}
+
+function bangunFilterTabs() {
+  var wrap = document.getElementById('filterTabs');
+  var html = '';
+  HASIL_VISIT_VALID.forEach(function(status) {
+    html += '<button class="filter-tab" data-status="' + escAttr(status) + '">' + escHtml(status) + '</button>';
+  });
+  wrap.insertAdjacentHTML('beforeend', html);
+}
+
+function isiSelectHasilVisit() {
+  var sel = document.getElementById('modalHasilVisit');
+  sel.innerHTML = HASIL_VISIT_VALID.map(function(s) {
+    return '<option value="' + escAttr(s) + '">' + escHtml(s) + '</option>';
+  }).join('');
+}
 
 // Cek dulu status maintenance (request ringan) sebelum muatData yang berat.
 // Kalau gagal ngecek (network hiccup dll), tetep lanjut normal — jangan
@@ -444,14 +532,14 @@ function tampilkanData() {
   document.getElementById('listTracker').addEventListener('click', function(ev) {
     var item = ev.target.closest('.list-item');
     if (!item) return;
-    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.catatan);
+    bukaModal(item.dataset.no, item.dataset.cabang, item.dataset.merchant);
   });
   document.getElementById('listTracker').addEventListener('keydown', function(ev) {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var item = ev.target.closest('.list-item');
     if (!item) return;
     ev.preventDefault();
-    bukaModal(item.dataset.kode, item.dataset.merchant, item.dataset.status, item.dataset.namaCabang, item.dataset.alamat, item.dataset.catatan);
+    bukaModal(item.dataset.no, item.dataset.cabang, item.dataset.merchant);
   });
 
   document.getElementById('modalCancel').addEventListener('click', tutupModal);
@@ -472,36 +560,41 @@ function isiFilterArea() {
     areas.map(function(a) { return '<option value="' + escAttr(a) + '">' + escHtml(a) + '</option>'; }).join('');
 }
 
-function badgeClassFor(status) {
-  if (status === 'On Progress') return 'badge-progress';
-  if (status === 'Live') return 'badge-live';
-  return 'badge-visit';
+function badgeClassFor(hasilVisit) {
+  return 'badge-' + (HASIL_VISIT_CLASS[hasilVisit] || 'belum');
+}
+
+function sudahBelumChip(label, nilai) {
+  var sudah = String(nilai || '').trim().toLowerCase() === 'sudah';
+  return '<span class="funnel-chip ' + (sudah ? 'sudah' : 'belum') + '">' + escHtml(label) + ': ' + (sudah ? 'Sudah' : 'Belum') + '</span>';
 }
 
 function render() {
   var keyword = (document.getElementById('searchBox') && document.getElementById('searchBox').value || '').toLowerCase().trim();
 
   var filtered = DATA_ALL.filter(function(m) {
-    if (STATUS_FILTER && m.status !== STATUS_FILTER) return false;
+    if (STATUS_FILTER && m.hasilVisit !== STATUS_FILTER) return false;
     if (AREA_FILTER && m.area !== AREA_FILTER) return false;
     if (!keyword) return true;
-    var gabungan = (m.namaMerchant + ' ' + m.namaCabang + ' ' + m.area + ' ' + m.kodeCabang).toLowerCase();
+    var gabungan = (m.namaMerchant + ' ' + m.cabang + ' ' + m.area + ' ' + m.region).toLowerCase();
     return gabungan.indexOf(keyword) !== -1;
   });
 
   // Ringkasan dihitung dari cakupan Area yang dipilih (bukan hasil
   // pencarian/status), supaya angkanya tetap relevan dengan scope yang dilihat.
   var cakupan = AREA_FILTER ? DATA_ALL.filter(function(m) { return m.area === AREA_FILTER; }) : DATA_ALL;
-  var visit = 0, progress = 0, live = 0;
+  var counter = { belum: 0 };
+  HASIL_VISIT_VALID.forEach(function(s) { counter[HASIL_VISIT_CLASS[s]] = 0; });
   cakupan.forEach(function(m) {
-    if (m.status === 'On Progress') progress++;
-    else if (m.status === 'Live') live++;
-    else visit++;
+    var cls = HASIL_VISIT_CLASS[m.hasilVisit];
+    if (cls) counter[cls]++;
+    else counter.belum++;
   });
   document.getElementById('statTotal').textContent = formatAngka(cakupan.length);
-  document.getElementById('statVisit').textContent = formatAngka(visit);
-  document.getElementById('statProgress').textContent = formatAngka(progress);
-  document.getElementById('statLive').textContent = formatAngka(live);
+  Object.keys(counter).forEach(function(cls) {
+    var el = document.getElementById('stat-' + cls);
+    if (el) el.textContent = formatAngka(counter[cls]);
+  });
 
   var wrap = document.getElementById('listTracker');
   if (!filtered.length) {
@@ -510,22 +603,26 @@ function render() {
   }
 
   wrap.innerHTML = filtered.map(function(m) {
-    var infoBaris = '<div class="list-item-info">' + escHtml(m.area) + ' · ' + escHtml(m.namaCabang) + ' (' + escHtml(m.kodeCabang) + ')</div>';
-    var alamatGabungan = [m.alamat, m.kota].filter(function(v) { return v && v !== '-'; }).join(', ');
-    var alamatBaris = alamatGabungan ? '<div class="list-item-alamat">' + escHtml(alamatGabungan) + '</div>' : '';
-    var ariaLabel = m.namaMerchant + ', status ' + m.status + '. Tekan untuk update progress.';
+    var infoBaris = '<div class="list-item-info">' + escHtml(m.area) + ' · ' + escHtml(m.cabang) + ' · ' + escHtml(m.kota) + '</div>';
+    var reasonBaris = m.reasonKendala && m.reasonKendala !== '-' ? '<div class="list-item-reason">' + escHtml(m.reasonKendala) + '</div>' : '';
+    var badgeLabel = m.hasilVisit && m.hasilVisit !== '-' ? m.hasilVisit : 'Belum Visit';
+    var ariaLabel = m.namaMerchant + ', hasil visit ' + badgeLabel + '. Tekan untuk update.';
+    var funnelRow = '<div class="funnel-row">'
+      + sudahBelumChip('LVM', m.sudahLVM)
+      + sudahBelumChip('Deal LF', m.sudahDeal)
+      + sudahBelumChip('Visit Beta', m.sudahVisitBeta)
+      + sudahBelumChip('Aktivasi', m.sudahAktivasi)
+      + '</div>';
     return '' +
-      // Catatan: data-alamat pakai m.alamat MENTAH (bukan alamatGabungan yang
-      // sudah digabung dgn Kota) — dikirim balik ke server buat pembeda
-      // tambahan kalau ada 2 merchant beda dengan nama sama di 1 cabang.
-      '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-kode="' + escAttr(m.kodeCabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '" data-status="' + escAttr(m.status) + '" data-nama-cabang="' + escAttr(m.namaCabang) + '" data-alamat="' + escAttr(m.alamat && m.alamat !== '-' ? m.alamat : '') + '" data-catatan="' + escAttr(m.catatan && m.catatan !== '-' ? m.catatan : '') + '">' +
+      '<div class="list-item" tabindex="0" role="button" aria-label="' + escAttr(ariaLabel) + '" data-no="' + escAttr(m.no) + '" data-cabang="' + escAttr(m.cabang) + '" data-merchant="' + escAttr(m.namaMerchant) + '">' +
         '<div class="list-item-top">' +
           '<span class="list-item-nama">' + escHtml(m.namaMerchant) + '</span>' +
-          '<span class="badge ' + badgeClassFor(m.status) + '">' + escHtml(m.status) + '</span>' +
+          '<span class="badge ' + badgeClassFor(m.hasilVisit) + '">' + escHtml(badgeLabel) + '</span>' +
         '</div>' +
         infoBaris +
-        alamatBaris +
-        '<div class="list-item-tgl">Update terakhir: ' + escHtml(m.tanggalUpdate) + '</div>' +
+        reasonBaris +
+        '<div class="list-item-tgl">Tanggal Visit: ' + escHtml(m.tanggalVisit) + '</div>' +
+        funnelRow +
       '</div>';
   }).join('');
 }
@@ -537,16 +634,23 @@ function escAttr(s) {
   return escHtml(s).replace(/"/g,'&quot;');
 }
 
-// ── Modal update status ──────────────────────────────────────────
-var STATUS_VALID = ['Visit', 'On Progress', 'Live'];
+// ── Modal update Hasil Visit ──────────────────────────────────────
+function bukaModal(no, cabang, namaMerchant) {
+  var data = DATA_ALL.filter(function(m) {
+    return (no && m.no === no) || (!no && m.cabang === cabang && m.namaMerchant === namaMerchant);
+  })[0];
+  if (!data) return;
 
-function bukaModal(kodeCabang, namaMerchant, statusSaatIni, namaCabang, alamat, catatan) {
-  MODAL_TARGET = { kodeCabang: kodeCabang, namaMerchant: namaMerchant, namaCabang: namaCabang, alamat: alamat || '' };
-  document.getElementById('modalMerchant').textContent = namaMerchant;
-  document.getElementById('modalCabang').textContent = namaCabang + ' (' + kodeCabang + ')';
-  document.getElementById('modalAlamat').textContent = alamat || '';
-  document.getElementById('modalCatatan').value = catatan || '';
-  document.getElementById('modalStatus').value = STATUS_VALID.indexOf(statusSaatIni) !== -1 ? statusSaatIni : 'Visit';
+  MODAL_TARGET = { no: data.no, cabang: data.cabang, namaMerchant: data.namaMerchant };
+  document.getElementById('modalMerchant').textContent = data.namaMerchant;
+  document.getElementById('modalCabang').textContent = data.cabang + ' · ' + data.area;
+  document.getElementById('modalReasonKendala').value = data.reasonKendala && data.reasonKendala !== '-' ? data.reasonKendala : '';
+  document.getElementById('modalHasilVisit').value = HASIL_VISIT_VALID.indexOf(data.hasilVisit) !== -1 ? data.hasilVisit : HASIL_VISIT_VALID[0];
+  document.getElementById('modalFunnelRow').innerHTML =
+    sudahBelumChip('LVM', data.sudahLVM) +
+    sudahBelumChip('Deal LF', data.sudahDeal) +
+    sudahBelumChip('Visit Beta', data.sudahVisitBeta) +
+    sudahBelumChip('Aktivasi', data.sudahAktivasi);
   document.getElementById('modalError').classList.remove('show');
   document.getElementById('modalOverlay').classList.add('show');
 }
@@ -558,8 +662,8 @@ function tutupModal() {
 
 function simpanStatus() {
   if (!MODAL_TARGET) return;
-  var statusBaru = document.getElementById('modalStatus').value;
-  var catatanValue = document.getElementById('modalCatatan').value.trim();
+  var hasilVisitBaru = document.getElementById('modalHasilVisit').value;
+  var reasonValue = document.getElementById('modalReasonKendala').value.trim();
   var errBox = document.getElementById('modalError');
   errBox.classList.remove('show');
 
@@ -567,24 +671,24 @@ function simpanStatus() {
   document.getElementById('modalSave').textContent = 'Menyimpan...';
 
   var params = new URLSearchParams({
-    action       : 'updateLivinMigrasiStatus',
-    kodeCabang   : MODAL_TARGET.kodeCabang,
-    namaMerchant : MODAL_TARGET.namaMerchant,
-    alamat       : MODAL_TARGET.alamat || '',
-    status       : statusBaru,
-    catatan      : catatanValue
+    action        : 'updateLivinMigrasiStatus',
+    no            : MODAL_TARGET.no || '',
+    cabang        : MODAL_TARGET.cabang || '',
+    namaMerchant  : MODAL_TARGET.namaMerchant,
+    hasilVisit    : hasilVisitBaru,
+    reasonKendala : reasonValue
   });
 
   // Target disalin ke variabel lokal (bukan baca MODAL_TARGET lagi pas
   // request selesai) — soalnya kalau user tutup modal sebelum retry
   // selesai, MODAL_TARGET sudah di-null-kan oleh tutupModal().
-  kirimUpdateStatus(params, MODAL_TARGET, statusBaru, catatanValue, 3);
+  kirimUpdateStatus(params, MODAL_TARGET, hasilVisitBaru, reasonValue, 3);
 }
 
 // Update status aman diulang otomatis (nimpa baris yang sama di sheet,
 // tidak bikin data dobel). Coba ulang beberapa kali dulu sebelum benar-benar
 // nampilin error ke user, sama seperti pola retry di muatData().
-function kirimUpdateStatus(params, target, statusBaru, catatanValue, sisaPercobaan) {
+function kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPercobaan) {
   var btn = document.getElementById('modalSave');
   var errBox = document.getElementById('modalError');
 
@@ -612,21 +716,22 @@ function kirimUpdateStatus(params, target, statusBaru, catatanValue, sisaPercoba
       }
       // Update data lokal supaya list & ringkasan langsung mencerminkan perubahan
       DATA_ALL.forEach(function(m) {
-        if (m.kodeCabang === target.kodeCabang && m.namaMerchant === target.namaMerchant) {
-          m.status = statusBaru;
-          if (catatanValue) m.catatan = catatanValue;
-          m.tanggalUpdate = 'Baru saja';
-        }
+        var cocok = (target.no && m.no === target.no) || (!target.no && m.cabang === target.cabang && m.namaMerchant === target.namaMerchant);
+        if (!cocok) return;
+        m.hasilVisit = hasilVisitBaru;
+        if (reasonValue) m.reasonKendala = reasonValue;
+        m.sudahVisit = 'Sudah';
+        m.tanggalVisit = 'Baru saja';
       });
       tutupModal();
       render();
-      toast('Status berhasil diperbarui!');
+      toast('Hasil Visit berhasil diperbarui!');
     })
     .catch(function(err) {
       if (sisaPercobaan > 1) {
         btn.textContent = 'Server sibuk, mencoba lagi...';
         setTimeout(function() {
-          kirimUpdateStatus(params, target, statusBaru, catatanValue, sisaPercobaan - 1);
+          kirimUpdateStatus(params, target, hasilVisitBaru, reasonValue, sisaPercobaan - 1);
         }, 2000);
         return;
       }
