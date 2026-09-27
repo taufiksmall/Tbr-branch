@@ -574,7 +574,10 @@ function render() {
 
   var filtered = DATA_ALL.filter(function(m) {
     if (STATUS_FILTER && m.hasilVisit !== STATUS_FILTER) return false;
-    if (AREA_FILTER && m.area !== AREA_FILTER) return false;
+    // String(...) di kedua sisi: value dari <select> SELALU string, tapi
+    // m.area bisa kebaca angka murni dari sheet (mis. kode area "150") —
+    // tanpa ini, "150" !== 150 gagal terus & semua merchant kefilter habis.
+    if (AREA_FILTER && String(m.area) !== String(AREA_FILTER)) return false;
     if (!keyword) return true;
     var gabungan = (m.namaMerchant + ' ' + m.cabang + ' ' + m.area + ' ' + m.region).toLowerCase();
     return gabungan.indexOf(keyword) !== -1;
@@ -582,7 +585,7 @@ function render() {
 
   // Ringkasan dihitung dari cakupan Area yang dipilih (bukan hasil
   // pencarian/status), supaya angkanya tetap relevan dengan scope yang dilihat.
-  var cakupan = AREA_FILTER ? DATA_ALL.filter(function(m) { return m.area === AREA_FILTER; }) : DATA_ALL;
+  var cakupan = AREA_FILTER ? DATA_ALL.filter(function(m) { return String(m.area) === String(AREA_FILTER); }) : DATA_ALL;
   var counter = { belum: 0 };
   HASIL_VISIT_VALID.forEach(function(s) { counter[HASIL_VISIT_CLASS[s]] = 0; });
   cakupan.forEach(function(m) {

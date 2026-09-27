@@ -2849,22 +2849,31 @@ function getLivinMigrasiAll() {
 
     var hasilVisitBaris = idxHasilVisit !== -1 ? String(data[i][idxHasilVisit] || '').trim() : '';
 
+    // Semua field dibungkus String(...).trim() (bukan dibiarkan apa adanya)
+    // — kolom "Area"/"Kota"/dst kadang keisi ANGKA murni (mis. kode area
+    // 150), yang kebaca getValues() sebagai tipe Number asli, bukan teks.
+    // Kalau dibalikin apa adanya, hasil JSON-nya jadi number (150) padahal
+    // dropdown filter Area di tracker-livin-food.html selalu nge-set
+    // AREA_FILTER sebagai STRING ("150") — perbandingan m.area === AREA_FILTER
+    // (number !== string) gagal terus, jadi begitu Area difilter, semua
+    // merchant hilang walau datanya ada. String(...) di sini nyamain
+    // tipenya dari sumbernya biar konsisten dgn cabang/namaMerchant di atas.
     hasil.push({
       no            : idxNo     !== -1 ? String(data[i][idxNo] || '').trim() : '',
-      region        : idxRegion !== -1 ? (data[i][idxRegion] || '-') : '-',
-      area          : idxArea   !== -1 ? (data[i][idxArea]   || '-') : '-',
+      region        : idxRegion !== -1 ? (String(data[i][idxRegion] || '').trim() || '-') : '-',
+      area          : idxArea   !== -1 ? (String(data[i][idxArea]   || '').trim() || '-') : '-',
       cabang        : cabangBaris || '-',
       namaMerchant  : namaMerchant,
-      sumberPipeline: idxSumber !== -1 ? (data[i][idxSumber] || '-') : '-',
-      kota          : idxKota   !== -1 ? (data[i][idxKota]   || '-') : '-',
-      sudahVisit    : idxSudahVisit !== -1 ? (data[i][idxSudahVisit] || 'Belum') : 'Belum',
+      sumberPipeline: idxSumber !== -1 ? (String(data[i][idxSumber] || '').trim() || '-') : '-',
+      kota          : idxKota   !== -1 ? (String(data[i][idxKota]   || '').trim() || '-') : '-',
+      sudahVisit    : idxSudahVisit !== -1 ? (String(data[i][idxSudahVisit] || '').trim() || 'Belum') : 'Belum',
       tanggalVisit  : idxTglVisit !== -1 && data[i][idxTglVisit] ? formatTanggal(data[i][idxTglVisit]) : '-',
       hasilVisit    : STATUS_LIVIN_MIGRASI_VALID.indexOf(hasilVisitBaris) !== -1 ? hasilVisitBaris : '-',
-      reasonKendala : idxReasonKendala !== -1 ? (data[i][idxReasonKendala] || '-') : '-',
-      sudahLVM      : idxSudahLVM  !== -1 ? (data[i][idxSudahLVM]  || 'Belum') : 'Belum',
-      sudahDeal     : idxSudahDeal !== -1 ? (data[i][idxSudahDeal] || 'Belum') : 'Belum',
-      sudahVisitBeta: idxSudahVisitBeta !== -1 ? (data[i][idxSudahVisitBeta] || 'Belum') : 'Belum',
-      sudahAktivasi : idxSudahAktivasi  !== -1 ? (data[i][idxSudahAktivasi]  || 'Belum') : 'Belum'
+      reasonKendala : idxReasonKendala !== -1 ? (String(data[i][idxReasonKendala] || '').trim() || '-') : '-',
+      sudahLVM      : idxSudahLVM  !== -1 ? (String(data[i][idxSudahLVM]  || '').trim() || 'Belum') : 'Belum',
+      sudahDeal     : idxSudahDeal !== -1 ? (String(data[i][idxSudahDeal] || '').trim() || 'Belum') : 'Belum',
+      sudahVisitBeta: idxSudahVisitBeta !== -1 ? (String(data[i][idxSudahVisitBeta] || '').trim() || 'Belum') : 'Belum',
+      sudahAktivasi : idxSudahAktivasi  !== -1 ? (String(data[i][idxSudahAktivasi]  || '').trim() || 'Belum') : 'Belum'
     });
   }
   return hasil;
