@@ -957,6 +957,28 @@ function _cariIndexHeader(headers, kandidatNama) {
   return -1;
 }
 
+// Samain semua whitespace (newline, spasi dobel, tab) jadi 1 spasi & trim —
+// header sheet sumber sering ditulis multi-baris di 1 sel (mis. "Reason
+// Kendala\n(Free Text)" alih-alih "Reason Kendala (Free Text)"), padahal
+// tampilannya keliatan sama persis di Google Sheets. Dipakai bareng
+// _idxHeaderFleksibel() di bawah supaya pencarian kolom nggak ketipu
+// bedanya newline vs spasi — sama semangatnya dengan _cariIndexHeader()
+// di atas (beda kasus: ini soal whitespace, bukan header ganti nama).
+function _normalisasiHeader(h) {
+  return String(h || '').replace(/\s+/g, ' ').trim();
+}
+
+// Cari index kolom berdasarkan nama, tapi dibandingkan setelah whitespace-nya
+// dinormalisasi (lihat _normalisasiHeader()) — jadi tetap ketemu walau di
+// sheet aslinya header itu ditulis dengan line break di tengah nama kolom.
+function _idxHeaderFleksibel(headers, namaKolom) {
+  var target = _normalisasiHeader(namaKolom);
+  for (var i = 0; i < headers.length; i++) {
+    if (_normalisasiHeader(headers[i]) === target) return i;
+  }
+  return -1;
+}
+
 /**
  * Ambil daftar merchant EDC (pipeline konversi ke LVM) milik satu cabang,
  * lengkap dengan status progress terkininya. Dipanggil dari form (index.html)
@@ -2776,21 +2798,24 @@ function getLivinMigrasiAll() {
   if (data.length < 2) return [];
 
   var headers   = data[0];
-  var idxNo     = headers.indexOf('No');
-  var idxRegion = headers.indexOf('Region');
-  var idxArea   = headers.indexOf('Area');
-  var idxCabang = headers.indexOf('Cabang');
+  var idxNo     = _idxHeaderFleksibel(headers, 'No');
+  var idxRegion = _idxHeaderFleksibel(headers, 'Region');
+  var idxArea   = _idxHeaderFleksibel(headers, 'Area');
+  var idxCabang = _idxHeaderFleksibel(headers, 'Cabang');
   var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
-  var idxSumber = headers.indexOf('Sumber Pipeline');
-  var idxKota   = headers.indexOf('Kota');
-  var idxSudahVisit  = headers.indexOf('Sudah Visit');
-  var idxTglVisit    = headers.indexOf('Tanggal Visit (Updated terakhir)');
-  var idxHasilVisit  = headers.indexOf('Hasil Visit');
-  var idxReasonKendala = headers.indexOf('Reason Kendala (Free Text)');
-  var idxSudahLVM    = headers.indexOf('Sudah LVM');
-  var idxSudahDeal   = headers.indexOf('Sudah Deal Livin Food');
-  var idxSudahVisitBeta  = headers.indexOf('Sudah Visit Beta');
-  var idxSudahAktivasi   = headers.indexOf('Sudah Aktivasi Livin Food');
+  var idxSumber = _idxHeaderFleksibel(headers, 'Sumber Pipeline');
+  var idxKota   = _idxHeaderFleksibel(headers, 'Kota');
+  var idxSudahVisit  = _idxHeaderFleksibel(headers, 'Sudah Visit');
+  var idxTglVisit    = _idxHeaderFleksibel(headers, 'Tanggal Visit (Updated terakhir)');
+  var idxHasilVisit  = _idxHeaderFleksibel(headers, 'Hasil Visit');
+  // "Reason Kendala (Free Text)" di file sumber sering ditulis dengan line
+  // break di tengah ("Reason Kendala\n(Free Text)") — _idxHeaderFleksibel
+  // menyamakan whitespace-nya dulu sebelum dibandingkan, jadi tetap ketemu.
+  var idxReasonKendala = _idxHeaderFleksibel(headers, 'Reason Kendala (Free Text)');
+  var idxSudahLVM    = _idxHeaderFleksibel(headers, 'Sudah LVM');
+  var idxSudahDeal   = _idxHeaderFleksibel(headers, 'Sudah Deal Livin Food');
+  var idxSudahVisitBeta  = _idxHeaderFleksibel(headers, 'Sudah Visit Beta');
+  var idxSudahAktivasi   = _idxHeaderFleksibel(headers, 'Sudah Aktivasi Livin Food');
 
   var hasil = [];
   for (var i = 1; i < data.length; i++) {
@@ -2848,13 +2873,13 @@ function updateLivinMigrasiStatus(ss, no, cabang, namaMerchant, hasilVisitBaru, 
   if (lastRow < 2) return false;
 
   var headers   = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var idxNo       = headers.indexOf('No');
-  var idxCabang   = headers.indexOf('Cabang');
+  var idxNo       = _idxHeaderFleksibel(headers, 'No');
+  var idxCabang   = _idxHeaderFleksibel(headers, 'Cabang');
   var idxMerchant = _cariIndexHeader(headers, ['Nama Merchant', 'dbaname']);
-  var idxSudahVisit = headers.indexOf('Sudah Visit');
-  var idxTglVisit   = headers.indexOf('Tanggal Visit (Updated terakhir)');
-  var idxHasilVisit = headers.indexOf('Hasil Visit');
-  var idxReasonKendala = headers.indexOf('Reason Kendala (Free Text)');
+  var idxSudahVisit = _idxHeaderFleksibel(headers, 'Sudah Visit');
+  var idxTglVisit   = _idxHeaderFleksibel(headers, 'Tanggal Visit (Updated terakhir)');
+  var idxHasilVisit = _idxHeaderFleksibel(headers, 'Hasil Visit');
+  var idxReasonKendala = _idxHeaderFleksibel(headers, 'Reason Kendala (Free Text)');
   if (idxMerchant === -1 || idxHasilVisit === -1) return false;
 
   var kolomNo       = idxNo !== -1 ? sheet.getRange(2, idxNo + 1, lastRow - 1, 1).getValues() : null;
